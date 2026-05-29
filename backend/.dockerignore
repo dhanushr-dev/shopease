@@ -1,0 +1,28 @@
+# Dependencies and build output
+target/
+!target/*.jar
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Environment files (secrets — never bake into image)
+.env
+.env.local
+.env.*.local
+
+# Git
+.git/
+.gitignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+docker-compose*.yml

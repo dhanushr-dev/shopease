@@ -1,0 +1,7 @@
+-- ============================================
+-- shopease - Additional seed data (optional)
+-- Primary seeding is handled by DataInitializer.java
+-- ============================================
+-- This file is intentionally minimal.
+-- All seed data (users, categories, products) is created
+-- programmatically by DataInitializer with proper BCrypt passwords.

@@ -1,0 +1,61 @@
+# ShopEase - Main Gitignore
+
+# Node dependency directories
+node_modules/
+frontend/node_modules/
+
+# Maven/Java Build artifacts
+target/
+backend/target/
+build/
+out/
+dist/
+frontend/dist/
+*.class
+*.jar
+*.war
+*.ear
+
+# Environment files and keys
+.env
+.env.local
+.env.development
+.env.production
+frontend/.env
+frontend/.env.local
+backend/.env
+backend/.env.local
+application-local.properties
+application-dev.properties.local
+
+
+# System/OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+*~
+
+# Maven wrappers and settings (optional, keeps repository clean)
+.mvn/
+backend/.mvn/
+mvnw
+mvnw.cmd
+backend/mvnw
+backend/mvnw.cmd
