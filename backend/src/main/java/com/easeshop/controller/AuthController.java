@@ -59,7 +59,14 @@ public class AuthController {
                 .limit(5)
                 .map(p -> p.getId() + ": " + p.getName() + " (Active=" + p.getActive() + ", CatId=" + p.getCategory().getId() + ")")
                 .collect(java.util.stream.Collectors.toList()));
+            
+            // Execute the failing query
+            org.springframework.data.domain.Page<com.easeshop.entity.Product> filtered = 
+                productRepository.findByFilters(4L, null, null, null, org.springframework.data.domain.PageRequest.of(0, 5));
+            debugInfo.put("querySuccess", true);
+            debugInfo.put("queryResultsCount", filtered.getTotalElements());
         } catch (Exception e) {
+            debugInfo.put("querySuccess", false);
             debugInfo.put("error", e.getMessage());
             java.io.StringWriter sw = new java.io.StringWriter();
             e.printStackTrace(new java.io.PrintWriter(sw));
