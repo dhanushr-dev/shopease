@@ -23,7 +23,9 @@ public class SpaForwardingController {
      */
     @RequestMapping(value = {
         "/{path:^(?!api|swagger|v3|api-docs)[^\\.]*}",
-        "/**/{path:^(?!api|swagger|v3|api-docs)[^\\.]*}"
+        "/{segment1:^(?!api|swagger|v3|api-docs)[^\\.]*}/{path:[^\\.]*}",
+        "/{segment1:^(?!api|swagger|v3|api-docs)[^\\.]*}/{segment2:[^\\.]*}/{path:[^\\.]*}",
+        "/{segment1:^(?!api|swagger|v3|api-docs)[^\\.]*}/{segment2:[^\\.]*}/{segment3:[^\\.]*}/{path:[^\\.]*}"
     })
     public String forward() {
         return "forward:/index.html";
