@@ -1,60 +1,58 @@
 # ========================
-# ShopEase — Render Blueprint (Infrastructure as Code)
+# ShopEase — Render Blueprint (Single Service Deploy)
 # ========================
-# Deploy via: https://dashboard.render.com → New → Blueprint → Connect Repo
+# ONE URL, ONE service, FREE forever
+#
+# Deploy: https://dashboard.render.com → New → Blueprint → Connect Repo
+# Or just deploy manually using the steps in the walkthrough
+
+databases:
+  - name: shopease-db
+    plan: free
+    databaseName: shopease
+    user: shopease
 
 services:
-  # ---- Backend: Spring Boot Web Service (Docker) ----
   - type: web
-    name: shopease-backend
+    name: shopease
     runtime: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    dockerfilePath: ./Dockerfile
     plan: free
     healthCheckPath: /api-docs
     envVars:
-      - key: SERVER_PORT
-        value: "8080"
-      - key: DB_URL
-        sync: false
+      - key: DB_HOST
+        fromDatabase:
+          name: shopease-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: shopease-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: shopease-db
+          property: database
       - key: DB_USERNAME
-        sync: false
+        fromDatabase:
+          name: shopease-db
+          property: user
       - key: DB_PASSWORD
-        sync: false
+        fromDatabase:
+          name: shopease-db
+          property: password
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRATION
         value: "86400000"
-      - key: CORS_ALLOWED_ORIGINS
-        sync: false
       - key: CLOUDINARY_CLOUD_NAME
-        sync: false
+        value: "placeholder"
       - key: CLOUDINARY_API_KEY
-        sync: false
+        value: "placeholder"
       - key: CLOUDINARY_API_SECRET
-        sync: false
+        value: "placeholder"
       - key: MAIL_USERNAME
-        sync: false
+        value: "placeholder@gmail.com"
       - key: MAIL_PASSWORD
-        sync: false
+        value: "placeholder"
       - key: SPRING_PROFILES_ACTIVE
         value: prod
-
-  # ---- Frontend: React Static Site ----
-  - type: web
-    name: shopease-frontend
-    runtime: static
-    buildCommand: cd frontend && npm install && npm run build
-    staticPublishPath: ./frontend/dist
-    plan: free
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: public, max-age=0, must-revalidate
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      - key: VITE_API_BASE_URL
-        sync: false

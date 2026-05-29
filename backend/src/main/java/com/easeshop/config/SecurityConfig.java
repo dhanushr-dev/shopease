@@ -115,6 +115,9 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
+                        // Static frontend resources — no JWT required
+                        .requestMatchers("/", "/index.html", "/manifest.json", "/favicon.ico").permitAll()
+                        .requestMatchers("/assets/**", "/*.svg", "/*.png", "/*.ico", "/*.json").permitAll()
                         // Public endpoints — no JWT required
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
@@ -128,6 +131,8 @@ public class SecurityConfig {
                                 "/v3/api-docs/**", "/api-docs/**").permitAll()
                         // Admin-only endpoints — must have ROLE_ADMIN authority
                         .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
+                        // SPA forwarding — allow all non-API routes
+                        .requestMatchers("/{path:^(?!api).*$}/**").permitAll()
                         // All other /api/** endpoints — any authenticated user (ROLE_USER or ROLE_ADMIN)
                         .anyRequest().authenticated()
                 );
