@@ -22,6 +22,9 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final com.easeshop.repository.UserRepository userRepository;
+    private final com.easeshop.repository.CategoryRepository categoryRepository;
+    private final com.easeshop.repository.ProductRepository productRepository;
 
     @PostMapping("/register")
     @Operation(summary = "Register a new user")
@@ -38,5 +41,30 @@ public class AuthController {
         log.info("🔑 Login request for: {}", request.getEmail());
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success(response, "Login successful"));
+    }
+
+    @GetMapping("/debug")
+    @Operation(summary = "Get debug database info")
+    public ResponseEntity<?> getDebugInfo() {
+        java.util.Map<String, Object> debugInfo = new java.util.HashMap<>();
+        try {
+            debugInfo.put("userCount", userRepository.count());
+            debugInfo.put("categoryCount", categoryRepository.count());
+            debugInfo.put("productCount", productRepository.count());
+            debugInfo.put("activeProductCount", productRepository.countByActiveTrue());
+            debugInfo.put("categories", categoryRepository.findAll().stream()
+                .map(c -> c.getId() + ": " + c.getName())
+                .collect(java.util.stream.Collectors.toList()));
+            debugInfo.put("sampleProducts", productRepository.findAll().stream()
+                .limit(5)
+                .map(p -> p.getId() + ": " + p.getName() + " (Active=" + p.getActive() + ", CatId=" + p.getCategory().getId() + ")")
+                .collect(java.util.stream.Collectors.toList()));
+        } catch (Exception e) {
+            debugInfo.put("error", e.getMessage());
+            java.io.StringWriter sw = new java.io.StringWriter();
+            e.printStackTrace(new java.io.PrintWriter(sw));
+            debugInfo.put("stackTrace", sw.toString());
+        }
+        return ResponseEntity.ok(debugInfo);
     }
 }
