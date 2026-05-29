@@ -22,8 +22,8 @@ public class SpaForwardingController {
      * - Does NOT contain a file extension (e.g., .js, .css, .png)
      */
     @RequestMapping(value = {
-        "/{path:^(?!api|swagger|v3|api-docs).*$}",
-        "/{path:^(?!api|swagger|v3|api-docs).*$}/**"
+        "/{path:^(?!api|swagger|v3|api-docs)[^\\.]*}",
+        "/**/{path:^(?!api|swagger|v3|api-docs)[^\\.]*}"
     })
     public String forward() {
         return "forward:/index.html";
