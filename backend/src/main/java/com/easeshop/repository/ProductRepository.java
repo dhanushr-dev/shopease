@@ -25,15 +25,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     long countByCreatedByIdAndActiveTrue(Long userId);
 
     @Query("SELECT p FROM Product p WHERE p.active = true AND " +
-            "(LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+            "(LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR " +
+            "LOWER(p.description) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')))")
     Page<Product> searchProducts(@Param("keyword") String keyword, Pageable pageable);
 
     @Query("SELECT p FROM Product p WHERE p.active = true AND " +
             "(:categoryId IS NULL OR p.category.id = :categoryId) AND " +
             "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
             "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
-            "(:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+            "(CAST(:keyword AS string) IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')))")
     Page<Product> findByFilters(
             @Param("categoryId") Long categoryId,
             @Param("minPrice") BigDecimal minPrice,
