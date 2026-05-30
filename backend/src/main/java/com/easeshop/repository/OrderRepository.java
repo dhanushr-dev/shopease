@@ -46,4 +46,17 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("SELECT COALESCE(SUM(i.price * i.quantity), 0) FROM OrderItem i WHERE i.product.createdBy.id = :adminId AND i.order.status != 'CANCELLED'")
     BigDecimal getTotalRevenueByAdminId(@Param("adminId") Long adminId);
+
+    /**
+     * Loads an Order with all its items, product details, and shipping address eagerly
+     * in a single JOIN FETCH query. Use this when you need to map the full OrderResponse
+     * (e.g., after payment verification) to avoid LazyInitializationException.
+     */
+    @Query("SELECT DISTINCT o FROM Order o " +
+           "LEFT JOIN FETCH o.items i " +
+           "LEFT JOIN FETCH i.product " +
+           "LEFT JOIN FETCH o.shippingAddress " +
+           "LEFT JOIN FETCH o.user " +
+           "WHERE o.id = :orderId")
+    Optional<Order> findByIdWithItems(@Param("orderId") Long orderId);
 }
