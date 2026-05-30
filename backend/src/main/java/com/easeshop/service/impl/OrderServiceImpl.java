@@ -350,7 +350,7 @@ public class OrderServiceImpl implements OrderService {
         order.setPaymentStatus("PAID");
         order.setStatus(OrderStatus.CONFIRMED);
         order.setPaymentId(paymentId); // Update with the actual Razorpay Payment ID
-        order = orderRepository.save(order);
+        orderRepository.save(order);
 
         // Record status history
         statusHistoryRepository.save(OrderStatusHistory.builder()
@@ -370,6 +370,11 @@ public class OrderServiceImpl implements OrderService {
         // Send order confirmation email upon successful payment verification
         emailService.sendOrderConfirmationEmail(order);
 
-        return mapper.toOrderResponse(order);
+        // Reload the order fresh from DB to ensure all lazy collections are initialized
+        // This prevents LazyInitializationException when the mapper accesses order.getItems()
+        Order confirmedOrder = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+        log.info("✅ Returning confirmed order #{} with {} items", confirmedOrder.getOrderNumber(), confirmedOrder.getItems().size());
+        return mapper.toOrderResponse(confirmedOrder);
     }
 }
