@@ -23,12 +23,13 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(exclude = "items")
-@ToString(exclude = "items")
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString(exclude = {"items", "user", "shippingAddress"})
 public class Order {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @Column(name = "order_number", nullable = false, unique = true, length = 50)

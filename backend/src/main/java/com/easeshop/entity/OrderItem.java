@@ -17,12 +17,13 @@ import java.math.BigDecimal;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(exclude = "order")
-@ToString(exclude = "order")
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString(exclude = {"order", "product"})
 public class OrderItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
