@@ -56,3 +56,7 @@ services:
         value: "placeholder"
       - key: SPRING_PROFILES_ACTIVE
         value: prod
+      - key: RAZORPAY_KEY_ID
+        value: "rzp_test_SkaF96nrBA36yp"
+      - key: RAZORPAY_KEY_SECRET
+        value: "KvKQ8aC4zBAxfuDUCG3Cu562"
