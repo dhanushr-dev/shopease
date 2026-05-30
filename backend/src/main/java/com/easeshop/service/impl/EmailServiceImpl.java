@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.format.DateTimeFormatter;
@@ -22,6 +23,7 @@ public class EmailServiceImpl implements EmailService {
     private final JavaMailSender mailSender;
 
     @Override
+    @Async
     public void sendOrderConfirmationEmail(Order order) {
         try {
             log.info("📧 Preparing order confirmation email for: {}", order.getUser().getEmail());

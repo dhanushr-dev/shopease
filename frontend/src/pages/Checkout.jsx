@@ -14,6 +14,7 @@ export default function Checkout() {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [loading, setLoading] = useState(true);
   const [placing, setPlacing] = useState(false);
+  const [placingStep, setPlacingStep] = useState('');
   const [notes, setNotes] = useState('');
 
   const [paymentMethod, setPaymentMethod] = useState('ONLINE');
@@ -73,6 +74,8 @@ export default function Checkout() {
   const executePlaceOrder = async (method) => {
     try {
       setPlacing(true);
+      setPlacingStep('Placing order...');
+
       const res = await orderAPI.create({ 
         addressId: selectedAddress, 
         notes: notes || null, 
@@ -84,66 +87,80 @@ export default function Checkout() {
         const orderData = res.data.data;
 
         if (method === 'ONLINE') {
-          // If Razorpay script is loaded, trigger modal directly
-          if (window.Razorpay) {
-            const options = {
-              key: orderData.razorpayKeyId || 'rzp_test_SkaF96nrBA36yp',
-              amount: finalAmount * 100, // in paise
-              currency: 'INR',
-              name: 'ShopEase',
-              description: 'E-commerce Purchase',
-              order_id: orderData.razorpayOrderId,
-              handler: async function (response) {
-                try {
-                  setPlacing(true);
-                  const verifyRes = await orderAPI.verifyPayment(orderData.id, {
-                    paymentId: response.razorpay_payment_id,
-                    razorpayOrderId: response.razorpay_order_id || orderData.razorpayOrderId,
-                    signature: response.razorpay_signature
-                  });
-
-                  if (verifyRes.data.success) {
-                    toast.success('Payment verified successfully!');
-                    await fetchCart();
-                    navigate('/payment-success', { state: { order: verifyRes.data.data } });
-                  } else {
-                    throw new Error('Payment verification failed');
-                  }
-                } catch (err) {
-                  toast.error(err.response?.data?.message || 'Verification failed');
-                  setPlacing(false);
-                }
-              },
-              prefill: {
-                name: JSON.parse(localStorage.getItem('shopease_user'))?.name || '',
-                email: JSON.parse(localStorage.getItem('shopease_user'))?.email || '',
-              },
-              theme: {
-                color: '#6366f1' // Indigo
-              },
-              modal: {
-                ondismiss: function() {
-                  setPlacing(false);
-                  toast.error('Payment cancelled');
-                }
-              }
-            };
-            const rzp = new window.Razorpay(options);
-            rzp.open();
-          } else {
-            toast.error('Payment gateway could not be loaded. Please try again.');
+          setPlacingStep('Opening Razorpay...');
+          // Ensure Razorpay script is loaded
+          if (!window.Razorpay) {
+            toast.error('Payment gateway could not be loaded. Please refresh and try again.');
             setPlacing(false);
+            setPlacingStep('');
+            return;
           }
+          const rzpKey = orderData.razorpayKeyId 
+            || import.meta.env.VITE_RAZORPAY_KEY_ID 
+            || 'rzp_test_SkaF96nrBA36yp';
+          const options = {
+            key: rzpKey,
+            amount: Math.round(finalAmount * 100), // in paise
+            currency: 'INR',
+            name: 'ShopEase',
+            description: 'E-commerce Purchase',
+            order_id: orderData.razorpayOrderId,
+            handler: async function (response) {
+              try {
+                setPlacing(true);
+                setPlacingStep('Verifying payment...');
+                const verifyRes = await orderAPI.verifyPayment(orderData.id, {
+                  paymentId: response.razorpay_payment_id,
+                  razorpayOrderId: response.razorpay_order_id || orderData.razorpayOrderId,
+                  signature: response.razorpay_signature
+                });
+
+                if (verifyRes.data.success) {
+                  toast.success('Payment verified! Order confirmed.');
+                  await fetchCart();
+                  navigate('/payment-success', { state: { order: verifyRes.data.data } });
+                } else {
+                  throw new Error('Payment verification failed');
+                }
+              } catch (err) {
+                const msg = err.response?.data?.message || 'Payment verification failed. Please contact support.';
+                toast.error(msg);
+                setPlacing(false);
+                setPlacingStep('');
+              }
+            },
+            prefill: {
+              name: JSON.parse(localStorage.getItem('shopease_user'))?.name || '',
+              email: JSON.parse(localStorage.getItem('shopease_user'))?.email || '',
+            },
+            theme: {
+              color: '#6366f1'
+            },
+            modal: {
+              ondismiss: function() {
+                setPlacing(false);
+                setPlacingStep('');
+                toast.error('Payment cancelled');
+              }
+            }
+          };
+          const rzp = new window.Razorpay(options);
+          rzp.open();
+          // Don't reset placing here — it stays true until handler runs or modal is dismissed
         } else {
-          // Cash on Delivery (COD) order
+          // Cash on Delivery
           toast.success(`Order placed! #${orderData.orderNumber}`);
           await fetchCart();
           navigate('/payment-success', { state: { order: orderData } });
         }
+      } else {
+        throw new Error(res.data.message || 'Order creation failed');
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to place order');
+      const msg = err.response?.data?.message || err.message || 'Failed to place order. Please try again.';
+      toast.error(msg);
       setPlacing(false);
+      setPlacingStep('');
     }
   };
 
@@ -348,7 +365,8 @@ export default function Checkout() {
               className="btn-primary w-full !py-3.5 gap-2" id="place-order-btn">
               {placing ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Placing Order...
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  {placingStep || 'Processing...'}
                 </span>
               ) : (<><HiOutlineCheck className="w-5 h-5" /> Place Order</>)}
             </button>

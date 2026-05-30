@@ -141,9 +141,12 @@ public class OrderServiceImpl implements OrderService {
         statusHistoryRepository.save(OrderStatusHistory.builder()
                 .order(order).status(OrderStatus.PENDING).message("Order placed successfully").build());
 
-        // Clear cart after order
-        cart.getItems().clear();
-        cartRepository.save(cart);
+        // Only clear cart immediately for COD orders
+        // For ONLINE orders, cart is cleared after successful payment verification
+        if ("COD".equals(paymentMethod)) {
+            cart.getItems().clear();
+            cartRepository.save(cart);
+        }
 
         log.info("✅ Order placed: {} (Total: ₹{}) by {}", orderNumber, totalAmount, email);
 
@@ -355,6 +358,14 @@ public class OrderServiceImpl implements OrderService {
                 .status(OrderStatus.CONFIRMED)
                 .message("Payment verified and order confirmed")
                 .build());
+
+        // Clear the cart now that payment is confirmed for ONLINE orders
+        Cart userCart = cartRepository.findByUserId(user.getId()).orElse(null);
+        if (userCart != null) {
+            userCart.getItems().clear();
+            cartRepository.save(userCart);
+            log.info("🛒 Cart cleared after successful payment verification for: {}", email);
+        }
 
         // Send order confirmation email upon successful payment verification
         emailService.sendOrderConfirmationEmail(order);
