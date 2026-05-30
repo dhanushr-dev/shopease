@@ -31,6 +31,7 @@ public class OrderServiceTest {
     @Mock private ProductRepository productRepository;
     @Mock private OrderStatusHistoryRepository statusHistoryRepository;
     @Mock private DtoMapper mapper;
+    @Mock private com.easeshop.service.EmailService emailService;
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -72,12 +73,16 @@ public class OrderServiceTest {
     }
 
     @Test
-    void testPlaceOrder_Success() {
+    void placeOrderWithCOD_shouldCreatePendingOrder() {
         when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
         when(cartRepository.findByUserId(1L)).thenReturn(Optional.of(cart));
         when(addressRepository.findByUserIdAndIsDefaultTrue(1L)).thenReturn(Optional.empty());
-        
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order o = invocation.getArgument(0);
+            o.setId(10L);
+            return o;
+        });
         when(statusHistoryRepository.save(any(OrderStatusHistory.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(productRepository.save(any(Product.class))).thenReturn(product);
         when(cartRepository.save(any(Cart.class))).thenReturn(cart);
@@ -86,6 +91,8 @@ public class OrderServiceTest {
                 .orderNumber("SE-123456")
                 .totalAmount(BigDecimal.valueOf(2000))
                 .status("PENDING")
+                .paymentStatus("PENDING")
+                .paymentMethod("COD")
                 .build();
         when(mapper.toOrderResponse(any(Order.class))).thenReturn(mockResponse);
 
@@ -96,19 +103,51 @@ public class OrderServiceTest {
         OrderResponse response = orderService.placeOrder("john@example.com", request);
 
         assertNotNull(response);
-        assertEquals("SE-123456", response.getOrderNumber());
-        assertEquals(0, BigDecimal.valueOf(2000).compareTo(response.getTotalAmount()));
-        
-        // Stock should be reduced from 10 to 8
-        assertEquals(8, product.getStock());
-        
-        // Cart should be cleared
-        assertTrue(cart.getItems().isEmpty());
+        assertEquals("PENDING", response.getStatus());
+        assertEquals("PENDING", response.getPaymentStatus());
+        assertEquals("COD", response.getPaymentMethod());
+        verify(emailService, times(1)).sendOrderConfirmationEmail(any(Order.class));
     }
 
     @Test
-    void testPlaceOrder_InsufficientStock() {
-        // Request quantity of 12 when stock is only 10
+    void placeOrderWithOnlinePayment_shouldNotMarkPaidAutomatically() {
+        when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
+        when(cartRepository.findByUserId(1L)).thenReturn(Optional.of(cart));
+        when(addressRepository.findByUserIdAndIsDefaultTrue(1L)).thenReturn(Optional.empty());
+
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order o = invocation.getArgument(0);
+            o.setId(10L);
+            return o;
+        });
+        when(statusHistoryRepository.save(any(OrderStatusHistory.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(productRepository.save(any(Product.class))).thenReturn(product);
+        when(cartRepository.save(any(Cart.class))).thenReturn(cart);
+
+        OrderResponse mockResponse = OrderResponse.builder()
+                .orderNumber("SE-123456")
+                .totalAmount(BigDecimal.valueOf(2000))
+                .status("PENDING")
+                .paymentStatus("PAYMENT_PENDING")
+                .paymentMethod("ONLINE")
+                .build();
+        when(mapper.toOrderResponse(any(Order.class))).thenReturn(mockResponse);
+
+        OrderRequest request = OrderRequest.builder()
+                .paymentMethod("ONLINE")
+                .build();
+
+        OrderResponse response = orderService.placeOrder("john@example.com", request);
+
+        assertNotNull(response);
+        assertEquals("PENDING", response.getStatus());
+        assertEquals("PAYMENT_PENDING", response.getPaymentStatus());
+        assertEquals("ONLINE", response.getPaymentMethod());
+        verify(emailService, never()).sendOrderConfirmationEmail(any(Order.class));
+    }
+
+    @Test
+    void placeOrderWithInsufficientStock_shouldThrowException() {
         cartItem.setQuantity(12);
 
         when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
@@ -119,8 +158,33 @@ public class OrderServiceTest {
                 .build();
 
         assertThrows(BadRequestException.class, () -> orderService.placeOrder("john@example.com", request));
-        
-        // Stock should remain unchanged
         assertEquals(10, product.getStock());
+    }
+
+    @Test
+    void placeOrder_shouldReduceStockSafely() {
+        when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
+        when(cartRepository.findByUserId(1L)).thenReturn(Optional.of(cart));
+        when(addressRepository.findByUserIdAndIsDefaultTrue(1L)).thenReturn(Optional.empty());
+
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(statusHistoryRepository.save(any(OrderStatusHistory.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(productRepository.save(any(Product.class))).thenReturn(product);
+        when(cartRepository.save(any(Cart.class))).thenReturn(cart);
+
+        OrderResponse mockResponse = OrderResponse.builder()
+                .orderNumber("SE-123456")
+                .totalAmount(BigDecimal.valueOf(2000))
+                .build();
+        when(mapper.toOrderResponse(any(Order.class))).thenReturn(mockResponse);
+
+        OrderRequest request = OrderRequest.builder()
+                .paymentMethod("COD")
+                .build();
+
+        orderService.placeOrder("john@example.com", request);
+
+        assertEquals(8, product.getStock());
+        assertTrue(cart.getItems().isEmpty());
     }
 }

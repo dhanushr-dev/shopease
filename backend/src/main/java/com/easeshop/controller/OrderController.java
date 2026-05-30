@@ -78,4 +78,19 @@ public class OrderController {
         java.util.List<java.util.Map<String, Object>> tracking = orderService.getOrderTracking(orderId);
         return ResponseEntity.ok(ApiResponse.success(tracking, "Tracking fetched"));
     }
+
+    @PostMapping("/{orderId}/verify")
+    @Operation(summary = "Verify Razorpay payment signature")
+    public ResponseEntity<ApiResponse<OrderResponse>> verifyPayment(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long orderId,
+            @RequestBody java.util.Map<String, String> request) {
+        String paymentId = request.get("paymentId");
+        String razorpayOrderId = request.get("razorpayOrderId");
+        String signature = request.get("signature");
+
+        OrderResponse order = orderService.verifyRazorpayPayment(
+                userDetails.getUsername(), orderId, paymentId, razorpayOrderId, signature);
+        return ResponseEntity.ok(ApiResponse.success(order, "Payment verified successfully"));
+    }
 }

@@ -20,4 +20,6 @@ public interface OrderService {
     OrderResponse updateOrderStatus(Long orderId, OrderStatusRequest request);
     /** Gets order tracking timeline. */
     java.util.List<java.util.Map<String, Object>> getOrderTracking(Long orderId);
+    /** Verifies Razorpay signature and completes payment. */
+    OrderResponse verifyRazorpayPayment(String email, Long orderId, String paymentId, String razorpayOrderId, String signature);
 }

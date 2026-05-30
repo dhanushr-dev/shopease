@@ -5,6 +5,7 @@ import com.easeshop.dto.response.ApiResponse;
 import com.easeshop.dto.response.RefundResponse;
 import com.easeshop.dto.response.ReplacementRequestResponse;
 import com.easeshop.dto.response.ReturnRequestResponse;
+import com.easeshop.dto.response.PagedResponse;
 import com.easeshop.service.ReturnReplaceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -75,8 +76,11 @@ public class ReturnReplaceController {
     // Admin Endpoints
     @GetMapping("/admin/returns")
     @Operation(summary = "Get all returns")
-    public ResponseEntity<ApiResponse<List<ReturnRequestResponse>>> getAllReturns() {
-        return ResponseEntity.ok(ApiResponse.success(service.getAllReturns(), "All returns fetched"));
+    public ResponseEntity<ApiResponse<PagedResponse<ReturnRequestResponse>>> getAllReturns(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        int limitSize = Math.min(size, 100);
+        return ResponseEntity.ok(ApiResponse.success(service.getAllReturns(page, limitSize), "All returns fetched"));
     }
 
     @PutMapping("/admin/returns/{returnId}/approve")
@@ -93,8 +97,11 @@ public class ReturnReplaceController {
 
     @GetMapping("/admin/replacements")
     @Operation(summary = "Get all replacements")
-    public ResponseEntity<ApiResponse<List<ReplacementRequestResponse>>> getAllReplacements() {
-        return ResponseEntity.ok(ApiResponse.success(service.getAllReplacements(), "All replacements fetched"));
+    public ResponseEntity<ApiResponse<PagedResponse<ReplacementRequestResponse>>> getAllReplacements(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        int limitSize = Math.min(size, 100);
+        return ResponseEntity.ok(ApiResponse.success(service.getAllReplacements(page, limitSize), "All replacements fetched"));
     }
 
     @PutMapping("/admin/replacements/{replacementId}/approve")
@@ -111,8 +118,11 @@ public class ReturnReplaceController {
 
     @GetMapping("/admin/refunds")
     @Operation(summary = "Get all refunds")
-    public ResponseEntity<ApiResponse<List<RefundResponse>>> getAllRefunds() {
-        return ResponseEntity.ok(ApiResponse.success(service.getAllRefunds(), "All refunds fetched"));
+    public ResponseEntity<ApiResponse<PagedResponse<RefundResponse>>> getAllRefunds(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        int limitSize = Math.min(size, 100);
+        return ResponseEntity.ok(ApiResponse.success(service.getAllRefunds(page, limitSize), "All refunds fetched"));
     }
 
     @PutMapping("/admin/refunds/{refundId}/complete")

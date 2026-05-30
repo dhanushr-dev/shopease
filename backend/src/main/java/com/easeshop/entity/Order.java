@@ -15,7 +15,10 @@ import java.util.List;
  * Contains order items, shipping address, and payment details.
  */
 @Entity
-@Table(name = "orders")
+@Table(name = "orders", indexes = {
+    @Index(name = "idx_orders_user_id", columnList = "user_id"),
+    @Index(name = "idx_orders_status", columnList = "status")
+})
 @Data
 @Builder
 @NoArgsConstructor

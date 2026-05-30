@@ -55,16 +55,31 @@ function AdminDashboard(props) {
         adminAPI.getAdminQuestions()
       ]);
       if (dashRes.status === 'fulfilled') setStats(dashRes.value.data.data);
-      if (ordersRes.status === 'fulfilled') setOrders(ordersRes.value.data.data || []);
-      if (usersRes.status === 'fulfilled') setUsers(usersRes.value.data.data || []);
+      if (ordersRes.status === 'fulfilled') {
+        const d = ordersRes.value.data;
+        setOrders(d.data?.content || d.content || d.data || []);
+      }
+      if (usersRes.status === 'fulfilled') {
+        const d = usersRes.value.data;
+        setUsers(d.data?.content || d.content || d.data || []);
+      }
       if (productsRes.status === 'fulfilled') {
         const d = productsRes.value.data;
         setProducts(d.data?.content || d.content || d.data || []);
       }
       if (catRes.status === 'fulfilled') setCategories(catRes.value.data.data || []);
-      if (retRes.status === 'fulfilled') setReturns(retRes.value.data.data || []);
-      if (repRes.status === 'fulfilled') setReplacements(repRes.value.data.data || []);
-      if (refRes.status === 'fulfilled') setRefunds(refRes.value.data.data || []);
+      if (retRes.status === 'fulfilled') {
+        const d = retRes.value.data;
+        setReturns(d.data?.content || d.content || d.data || []);
+      }
+      if (repRes.status === 'fulfilled') {
+        const d = repRes.value.data;
+        setReplacements(d.data?.content || d.content || d.data || []);
+      }
+      if (refRes.status === 'fulfilled') {
+        const d = refRes.value.data;
+        setRefunds(d.data?.content || d.content || d.data || []);
+      }
       if (qRes.status === 'fulfilled') setAdminQuestions(qRes.value.data.data || []);
     } catch (err) { console.error('Error:', err); }
     finally { setLoading(false); }

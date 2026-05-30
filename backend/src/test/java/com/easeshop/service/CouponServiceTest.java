@@ -111,9 +111,21 @@ public class CouponServiceTest {
         when(couponRepository.findByCodeIgnoreCase("SUMMER10")).thenReturn(Optional.of(percentageCoupon));
 
         CouponApplyRequest request = CouponApplyRequest.builder()
-                .couponCode("SUMMER10")
-                .cartTotal(BigDecimal.valueOf(600))
-                .build();
+            .couponCode("SUMMER10")
+            .cartTotal(BigDecimal.valueOf(600))
+            .build();
+
+        assertThrows(BadRequestException.class, () -> couponService.applyCoupon(request));
+    }
+
+    @Test
+    void invalidCoupon_shouldThrowException() {
+        when(couponRepository.findByCodeIgnoreCase("INVALID")).thenReturn(Optional.empty());
+
+        CouponApplyRequest request = CouponApplyRequest.builder()
+            .couponCode("INVALID")
+            .cartTotal(BigDecimal.valueOf(600))
+            .build();
 
         assertThrows(BadRequestException.class, () -> couponService.applyCoupon(request));
     }

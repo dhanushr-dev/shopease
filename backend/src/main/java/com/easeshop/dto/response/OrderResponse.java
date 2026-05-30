@@ -31,6 +31,8 @@ public class OrderResponse {
     private String userEmail;
     private BigDecimal discountAmount;
     private String couponCode;
+    private String razorpayOrderId;
+    private String razorpayKeyId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

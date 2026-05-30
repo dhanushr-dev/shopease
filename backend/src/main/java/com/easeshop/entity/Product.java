@@ -13,7 +13,11 @@ import java.time.LocalDateTime;
  * Each product belongs to a single category.
  */
 @Entity
-@Table(name = "products")
+@Table(name = "products", indexes = {
+    @Index(name = "idx_products_category_id", columnList = "category_id"),
+    @Index(name = "idx_products_active", columnList = "active")
+})
+@org.hibernate.annotations.Check(constraints = "price >= 0 AND stock >= 0")
 @Data
 @Builder
 @NoArgsConstructor
@@ -23,6 +27,9 @@ public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Version
+    private Long version;
 
     @Column(nullable = false, length = 200)
     private String name;

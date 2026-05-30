@@ -12,7 +12,9 @@ import java.time.LocalDateTime;
  * Coupon entity for discount/promo code system.
  */
 @Entity
-@Table(name = "coupons")
+@Table(name = "coupons", indexes = {
+    @Index(name = "idx_coupons_code", columnList = "code")
+})
 @Data
 @Builder
 @NoArgsConstructor

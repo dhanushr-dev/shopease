@@ -101,8 +101,16 @@ export default function PaymentSuccess() {
           </div>
         </div>
 
-        <h1 className="text-2xl md:text-3xl font-extrabold font-display text-surface-900 mb-2">Order Confirmed!</h1>
-        <p className="text-surface-500 mb-6">Thank you for your purchase. Your payment was processed successfully.</p>
+        <h1 className="text-2xl md:text-3xl font-extrabold font-display text-surface-900 mb-2">
+          {order.paymentStatus === 'PAID' ? 'Order Confirmed!' : order.paymentMethod === 'COD' ? 'Order Confirmed!' : 'Order Placed!'}
+        </h1>
+        <p className="text-surface-500 mb-6">
+          {order.paymentStatus === 'PAID' 
+            ? 'Thank you for your purchase. Your payment was processed successfully.' 
+            : order.paymentMethod === 'COD'
+            ? 'Thank you for your purchase. Your order has been placed and will be paid on delivery.'
+            : 'Thank you for your purchase. Your order is pending payment verification.'}
+        </p>
 
         {/* Order Details Panel */}
         <div className="bg-surface-50 rounded-2xl p-5 border border-surface-200 text-left space-y-3 mb-8">
@@ -111,13 +119,19 @@ export default function PaymentSuccess() {
             <span className="font-bold text-surface-900 font-mono">{order.orderNumber}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-surface-500">Amount Paid</span>
+            <span className="text-surface-500">Total Amount</span>
             <span className="font-bold text-primary-600">{formatPrice(order.totalAmount)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-surface-500">Payment Status</span>
-            <span className="font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 text-xs">
-              {order.paymentStatus || 'PAID'}
+            <span className={`font-semibold px-2 py-0.5 rounded-md border text-xs ${
+              order.paymentStatus === 'PAID'
+                ? 'text-emerald-600 bg-emerald-50 border-emerald-100'
+                : order.paymentStatus === 'PAYMENT_PENDING'
+                ? 'text-amber-600 bg-amber-50 border-amber-100'
+                : 'text-surface-600 bg-surface-50 border-surface-100'
+            }`}>
+              {order.paymentStatus || 'PENDING'}
             </span>
           </div>
           <div className="flex justify-between text-sm">

@@ -188,4 +188,53 @@ public class AuthServiceTest {
         verify(authenticationManager, never()).authenticate(any(UsernamePasswordAuthenticationToken.class));
         verify(jwtUtil, never()).generateToken(anyMap(), any(UserDetails.class));
     }
+
+    @Test
+    void registerNormalUser_shouldCreateUserRoleOnly() {
+        // Arrange
+        com.easeshop.dto.request.RegisterRequest request = com.easeshop.dto.request.RegisterRequest.builder()
+                .name("Alice Smith")
+                .email("alice@example.com")
+                .password("password123")
+                .phone("1234567892")
+                .accountType("USER")
+                .build();
+
+        when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
+        when(passwordEncoder.encode("password123")).thenReturn("encodedPasswordAlice");
+
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User u = invocation.getArgument(0);
+            u.setId(3L);
+            return u;
+        });
+
+        // Act
+        AuthResponse response = authService.register(request);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals("ROLE_USER", response.getRole());
+        assertEquals("USER", response.getAccountType());
+        verify(userRepository, times(1)).save(any(User.class));
+        verify(cartRepository, times(1)).save(any(com.easeshop.entity.Cart.class));
+    }
+
+    @Test
+    void registerAdminFromPublicSignup_shouldThrowException() {
+        // Arrange
+        com.easeshop.dto.request.RegisterRequest request = com.easeshop.dto.request.RegisterRequest.builder()
+                .name("Malicious Admin")
+                .email("hacker@shopease.com")
+                .password("password123")
+                .accountType("ADMIN")
+                .build();
+
+        // Act & Assert
+        BadRequestException exception = assertThrows(BadRequestException.class, () -> authService.register(request));
+        assertEquals("Admin registration is not allowed from public signup.", exception.getMessage());
+
+        verify(userRepository, never()).save(any(User.class));
+        verify(cartRepository, never()).save(any(com.easeshop.entity.Cart.class));
+    }
 }

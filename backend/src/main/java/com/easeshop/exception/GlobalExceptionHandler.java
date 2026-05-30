@@ -112,6 +112,20 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles Optimistic Locking Failures.
+     */
+    @ExceptionHandler({
+            org.springframework.orm.ObjectOptimisticLockingFailureException.class,
+            org.springframework.dao.OptimisticLockingFailureException.class
+    })
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLocking(Exception ex) {
+        log.error("Optimistic locking failure: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error("Product stock changed. Please try again."));
+    }
+
+    /**
      * Handles all uncaught exceptions (500).
      */
     @ExceptionHandler(Exception.class)

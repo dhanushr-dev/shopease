@@ -45,27 +45,6 @@ export default function Register() {
           <p className="text-surface-500 mt-1">Join ShopEase and start shopping</p>
         </div>
         <div className="card-glass p-8 rounded-2xl shadow-2xl">
-          <div className="flex gap-2 p-1 mb-6 bg-surface-100 rounded-xl">
-            <button
-              type="button"
-              onClick={() => setAccountType('USER')}
-              className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
-                accountType === 'USER' ? 'bg-white text-primary-600 shadow-sm' : 'text-surface-600 hover:text-surface-900'
-              }`}
-            >
-              Shop Products (User)
-            </button>
-            <button
-              type="button"
-              onClick={() => setAccountType('ADMIN')}
-              className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
-                accountType === 'ADMIN' ? 'bg-white text-accent-600 shadow-sm' : 'text-surface-600 hover:text-surface-900'
-              }`}
-            >
-              Sell Products (Admin)
-            </button>
-          </div>
-
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>
               <label htmlFor="name" className="input-label">Full Name</label>

@@ -10,6 +10,6 @@ import java.util.Optional;
 @Repository
 public interface ReplacementRequestRepository extends JpaRepository<ReplacementRequest, Long> {
     List<ReplacementRequest> findByUserIdOrderByRequestedAtDesc(Long userId);
-    List<ReplacementRequest> findAllByOrderByRequestedAtDesc();
+    org.springframework.data.domain.Page<ReplacementRequest> findAllByOrderByRequestedAtDesc(org.springframework.data.domain.Pageable pageable);
     Optional<ReplacementRequest> findByOrderId(Long orderId);
 }

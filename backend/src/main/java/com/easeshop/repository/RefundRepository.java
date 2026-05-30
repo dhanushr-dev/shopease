@@ -10,6 +10,6 @@ import java.util.Optional;
 @Repository
 public interface RefundRepository extends JpaRepository<Refund, Long> {
     List<Refund> findByUserIdOrderByCreatedAtDesc(Long userId);
-    List<Refund> findAllByOrderByCreatedAtDesc();
+    org.springframework.data.domain.Page<Refund> findAllByOrderByCreatedAtDesc(org.springframework.data.domain.Pageable pageable);
     Optional<Refund> findByOrderId(Long orderId);
 }

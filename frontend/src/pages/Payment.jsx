@@ -25,6 +25,19 @@ export default function Payment() {
     }
   }, [location.state, navigate]);
 
+  // Load Razorpay Script
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, []);
+
   const checkoutData = location.state || {};
   const { addressId, notes, couponCode, amount } = checkoutData;
 
@@ -142,18 +155,10 @@ export default function Payment() {
       }
     }
 
-    // Start payment processing animation
     try {
       setProcessing(true);
-      
-      setProcessingStep('Connecting to secure payment gateway...');
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setProcessingStep(`Authorizing payment of ${formatPrice(amount)}...`);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setProcessingStep('Payment authorized! Placing your order...');
-      
+      setProcessingStep('Initiating order with backend...');
+
       // Call backend API to place order
       const res = await orderAPI.create({ 
         addressId, 
@@ -163,11 +168,76 @@ export default function Payment() {
       });
 
       if (res.data.success) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setProcessingStep('Success!');
-        toast.success('Order placed successfully!');
-        await fetchCart();
-        navigate('/payment-success', { state: { order: res.data.data } });
+        const orderData = res.data.data;
+
+        // Check if Razorpay script is loaded
+        if (window.Razorpay) {
+          setProcessingStep('Opening secure payment portal...');
+          const options = {
+            key: orderData.razorpayKeyId || 'rzp_test_mockKeyId',
+            amount: amount * 100, // in paise
+            currency: 'INR',
+            name: 'ShopEase',
+            description: 'E-commerce Purchase',
+            order_id: orderData.razorpayOrderId,
+            handler: async function (response) {
+              try {
+                setProcessing(true);
+                setProcessingStep('Verifying transaction...');
+                const verifyRes = await orderAPI.verifyPayment(orderData.id, {
+                  paymentId: response.razorpay_payment_id || 'pay_mock_' + Math.random().toString(36).substr(2, 9),
+                  razorpayOrderId: response.razorpay_order_id || orderData.razorpayOrderId,
+                  signature: response.razorpay_signature || 'mock_signature'
+                });
+
+                if (verifyRes.data.success) {
+                  toast.success('Payment verified successfully!');
+                  await fetchCart();
+                  navigate('/payment-success', { state: { order: verifyRes.data.data } });
+                } else {
+                  throw new Error('Payment verification failed');
+                }
+              } catch (err) {
+                toast.error(err.response?.data?.message || 'Verification failed');
+                setProcessing(false);
+              }
+            },
+            prefill: {
+              name: JSON.parse(localStorage.getItem('shopease_user'))?.name || '',
+              email: JSON.parse(localStorage.getItem('shopease_user'))?.email || '',
+            },
+            theme: {
+              color: '#6366f1' // Indigo
+            },
+            modal: {
+              ondismiss: function() {
+                setProcessing(false);
+                toast.error('Payment cancelled');
+              }
+            }
+          };
+          const rzp = new window.Razorpay(options);
+          rzp.open();
+        } else {
+          // Razorpay offline script fallback
+          setProcessingStep('Razorpay offline. Simulating payment authorization...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          setProcessingStep('Verifying mock payment...');
+          const verifyRes = await orderAPI.verifyPayment(orderData.id, {
+            paymentId: 'pay_mock_' + Math.random().toString(36).substr(2, 9),
+            razorpayOrderId: orderData.razorpayOrderId || 'order_mock_fallback',
+            signature: 'mock_signature'
+          });
+
+          if (verifyRes.data.success) {
+            toast.success('Mock payment verified successfully!');
+            await fetchCart();
+            navigate('/payment-success', { state: { order: verifyRes.data.data } });
+          } else {
+            throw new Error('Mock Verification failed');
+          }
+        }
       } else {
         throw new Error('Order creation failed on backend');
       }

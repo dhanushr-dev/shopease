@@ -4,6 +4,7 @@ import com.easeshop.dto.request.ReturnOrReplaceRequest;
 import com.easeshop.dto.response.RefundResponse;
 import com.easeshop.dto.response.ReplacementRequestResponse;
 import com.easeshop.dto.response.ReturnRequestResponse;
+import com.easeshop.dto.response.PagedResponse;
 import com.easeshop.entity.*;
 import com.easeshop.exception.BadRequestException;
 import com.easeshop.exception.ResourceNotFoundException;
@@ -129,9 +130,21 @@ public class ReturnReplaceServiceImpl implements ReturnReplaceService {
     }
 
     @Override
-    public List<ReturnRequestResponse> getAllReturns() {
-        return returnRepo.findAllByOrderByRequestedAtDesc().stream()
-                .map(r -> toReturnResponse(r, orderRepository.findById(r.getOrderId()).map(Order::getOrderNumber).orElse(""))).collect(Collectors.toList());
+    public PagedResponse<ReturnRequestResponse> getAllReturns(int page, int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        org.springframework.data.domain.Page<ReturnRequest> returnsPage = returnRepo.findAllByOrderByRequestedAtDesc(pageable);
+        List<ReturnRequestResponse> content = returnsPage.getContent().stream()
+                .map(r -> toReturnResponse(r, orderRepository.findById(r.getOrderId()).map(Order::getOrderNumber).orElse("")))
+                .collect(Collectors.toList());
+        return PagedResponse.<ReturnRequestResponse>builder()
+                .content(content)
+                .pageNumber(returnsPage.getNumber())
+                .pageSize(returnsPage.getSize())
+                .totalElements(returnsPage.getTotalElements())
+                .totalPages(returnsPage.getTotalPages())
+                .last(returnsPage.isLast())
+                .first(returnsPage.isFirst())
+                .build();
     }
 
     @Override
@@ -185,9 +198,21 @@ public class ReturnReplaceServiceImpl implements ReturnReplaceService {
     }
 
     @Override
-    public List<ReplacementRequestResponse> getAllReplacements() {
-         return replacementRepo.findAllByOrderByRequestedAtDesc().stream()
-                .map(r -> toReplacementResponse(r, orderRepository.findById(r.getOrderId()).map(Order::getOrderNumber).orElse(""))).collect(Collectors.toList());
+    public PagedResponse<ReplacementRequestResponse> getAllReplacements(int page, int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        org.springframework.data.domain.Page<ReplacementRequest> repsPage = replacementRepo.findAllByOrderByRequestedAtDesc(pageable);
+        List<ReplacementRequestResponse> content = repsPage.getContent().stream()
+                .map(r -> toReplacementResponse(r, orderRepository.findById(r.getOrderId()).map(Order::getOrderNumber).orElse("")))
+                .collect(Collectors.toList());
+        return PagedResponse.<ReplacementRequestResponse>builder()
+                .content(content)
+                .pageNumber(repsPage.getNumber())
+                .pageSize(repsPage.getSize())
+                .totalElements(repsPage.getTotalElements())
+                .totalPages(repsPage.getTotalPages())
+                .last(repsPage.isLast())
+                .first(repsPage.isFirst())
+                .build();
     }
 
     @Override
@@ -247,9 +272,21 @@ public class ReturnReplaceServiceImpl implements ReturnReplaceService {
     }
 
     @Override
-    public List<RefundResponse> getAllRefunds() {
-        return refundRepo.findAllByOrderByCreatedAtDesc().stream()
-                .map(r -> toRefundResponse(r, orderRepository.findById(r.getOrderId()).map(Order::getOrderNumber).orElse(""))).collect(Collectors.toList());
+    public PagedResponse<RefundResponse> getAllRefunds(int page, int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        org.springframework.data.domain.Page<Refund> refundsPage = refundRepo.findAllByOrderByCreatedAtDesc(pageable);
+        List<RefundResponse> content = refundsPage.getContent().stream()
+                .map(r -> toRefundResponse(r, orderRepository.findById(r.getOrderId()).map(Order::getOrderNumber).orElse("")))
+                .collect(Collectors.toList());
+        return PagedResponse.<RefundResponse>builder()
+                .content(content)
+                .pageNumber(refundsPage.getNumber())
+                .pageSize(refundsPage.getSize())
+                .totalElements(refundsPage.getTotalElements())
+                .totalPages(refundsPage.getTotalPages())
+                .last(refundsPage.isLast())
+                .first(refundsPage.isFirst())
+                .build();
     }
 
     @Override

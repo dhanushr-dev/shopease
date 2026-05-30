@@ -208,12 +208,26 @@ public class AdminController {
     // ===== Order Management =====
     @GetMapping("/orders")
     @Operation(summary = "Get all orders for admin's products")
-    public ResponseEntity<ApiResponse<List<OrderResponse>>> getAllOrders() {
+    public ResponseEntity<ApiResponse<PagedResponse<OrderResponse>>> getAllOrders(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        int limitSize = Math.min(size, 100);
         User admin = getCurrentAdmin();
-        Pageable limit = PageRequest.of(0, 100);
-        List<Order> orders = orderRepository.findByAdminId(admin.getId(), limit).getContent();
-        List<OrderResponse> responses = orders.stream().map(mapper::toOrderResponse).collect(Collectors.toList());
-        return ResponseEntity.ok(ApiResponse.success(responses, "Orders fetched"));
+        Pageable pageable = PageRequest.of(page, limitSize);
+        org.springframework.data.domain.Page<Order> ordersPage = orderRepository.findByAdminId(admin.getId(), pageable);
+        List<OrderResponse> content = ordersPage.getContent().stream()
+                .map(mapper::toOrderResponse)
+                .collect(Collectors.toList());
+        PagedResponse<OrderResponse> response = PagedResponse.<OrderResponse>builder()
+                .content(content)
+                .pageNumber(ordersPage.getNumber())
+                .pageSize(ordersPage.getSize())
+                .totalElements(ordersPage.getTotalElements())
+                .totalPages(ordersPage.getTotalPages())
+                .last(ordersPage.isLast())
+                .first(ordersPage.isFirst())
+                .build();
+        return ResponseEntity.ok(ApiResponse.success(response, "Orders fetched"));
     }
 
     @PutMapping("/orders/{orderId}/status")
@@ -237,9 +251,25 @@ public class AdminController {
     // ===== User Management =====
     @GetMapping("/users")
     @Operation(summary = "Get all users")
-    public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
-        List<UserResponse> users = userService.getAllUsers();
-        return ResponseEntity.ok(ApiResponse.success(users, "Users fetched"));
+    public ResponseEntity<ApiResponse<PagedResponse<UserResponse>>> getAllUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        int limitSize = Math.min(size, 100);
+        Pageable pageable = PageRequest.of(page, limitSize);
+        org.springframework.data.domain.Page<User> usersPage = userRepository.findAll(pageable);
+        List<UserResponse> content = usersPage.getContent().stream()
+                .map(mapper::toUserResponse)
+                .collect(Collectors.toList());
+        PagedResponse<UserResponse> response = PagedResponse.<UserResponse>builder()
+                .content(content)
+                .pageNumber(usersPage.getNumber())
+                .pageSize(usersPage.getSize())
+                .totalElements(usersPage.getTotalElements())
+                .totalPages(usersPage.getTotalPages())
+                .last(usersPage.isLast())
+                .first(usersPage.isFirst())
+                .build();
+        return ResponseEntity.ok(ApiResponse.success(response, "Users fetched"));
     }
 
     // ===== Banner Management =====

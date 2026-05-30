@@ -7,10 +7,12 @@ import com.easeshop.entity.*;
 import com.easeshop.exception.BadRequestException;
 import com.easeshop.exception.ResourceNotFoundException;
 import com.easeshop.repository.*;
+import com.easeshop.service.EmailService;
 import com.easeshop.service.OrderService;
 import com.easeshop.util.DtoMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,13 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
     private final OrderStatusHistoryRepository statusHistoryRepository;
     private final DtoMapper mapper;
+    private final EmailService emailService;
+
+    @Value("${razorpay.key.id:}")
+    private String razorpayKeyId;
+
+    @Value("${razorpay.key.secret:}")
+    private String razorpayKeySecret;
 
     @Override
     @Transactional
@@ -56,7 +65,8 @@ public class OrderServiceImpl implements OrderService {
         // Create order
         String orderNumber = "SE-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         String paymentMethod = (request != null && request.getPaymentMethod() != null) ? request.getPaymentMethod().toUpperCase() : "COD";
-        String paymentStatus = "ONLINE".equals(paymentMethod) ? "PAID" : "PENDING";
+        // Task 4: Default online orders to PAYMENT_PENDING instead of PAID
+        String paymentStatus = "ONLINE".equals(paymentMethod) ? "PAYMENT_PENDING" : "PENDING";
 
         Order order = Order.builder()
                 .orderNumber(orderNumber)
@@ -97,6 +107,34 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.setTotalAmount(totalAmount);
+
+        // Razorpay order creation for ONLINE payments
+        String razorpayOrderId = null;
+        if ("ONLINE".equals(paymentMethod)) {
+            if (razorpayKeyId != null && !razorpayKeyId.isBlank() && razorpayKeySecret != null && !razorpayKeySecret.isBlank()) {
+                try {
+                    com.razorpay.RazorpayClient razorpay = new com.razorpay.RazorpayClient(razorpayKeyId, razorpayKeySecret);
+                    org.json.JSONObject orderRequest = new org.json.JSONObject();
+                    orderRequest.put("amount", totalAmount.multiply(new BigDecimal("100")).intValue()); // amount in paise
+                    orderRequest.put("currency", "INR");
+                    orderRequest.put("receipt", orderNumber);
+                    
+                    com.razorpay.Order razorpayOrder = razorpay.orders.create(orderRequest);
+                    razorpayOrderId = razorpayOrder.get("id");
+                    order.setPaymentId(razorpayOrderId);
+                    log.info("💰 Created Razorpay order: {} for order: {}", razorpayOrderId, orderNumber);
+                } catch (Exception e) {
+                    log.error("❌ Failed to create Razorpay order. Falling back to mock. Error: {}", e.getMessage());
+                    razorpayOrderId = "order_mock_" + UUID.randomUUID().toString().substring(0, 8);
+                    order.setPaymentId(razorpayOrderId);
+                }
+            } else {
+                log.info("ℹ️ Razorpay keys not configured. Generating mock order ID.");
+                razorpayOrderId = "order_mock_" + UUID.randomUUID().toString().substring(0, 8);
+                order.setPaymentId(razorpayOrderId);
+            }
+        }
+
         order = orderRepository.save(order);
 
         // Record initial status history
@@ -108,7 +146,18 @@ public class OrderServiceImpl implements OrderService {
         cartRepository.save(cart);
 
         log.info("✅ Order placed: {} (Total: ₹{}) by {}", orderNumber, totalAmount, email);
-        return mapper.toOrderResponse(order);
+
+        // Trigger email notification immediately for COD orders
+        if ("COD".equals(paymentMethod)) {
+            emailService.sendOrderConfirmationEmail(order);
+        }
+
+        OrderResponse response = mapper.toOrderResponse(order);
+        if ("ONLINE".equals(paymentMethod)) {
+            response.setRazorpayOrderId(razorpayOrderId);
+            response.setRazorpayKeyId(razorpayKeyId);
+        }
+        return response;
     }
 
     @Override
@@ -253,5 +302,63 @@ public class OrderServiceImpl implements OrderService {
             entry.put("timestamp", h.getCreatedAt());
             return entry;
         }).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse verifyRazorpayPayment(String email, Long orderId, String paymentId, String razorpayOrderId, String signature) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+
+        if (!order.getUser().getId().equals(user.getId())) {
+            throw new BadRequestException("This order does not belong to you");
+        }
+
+        // Verify Razorpay signature
+        boolean isValid = false;
+        if (razorpayKeyId != null && !razorpayKeyId.isBlank() && razorpayKeySecret != null && !razorpayKeySecret.isBlank()) {
+            try {
+                org.json.JSONObject options = new org.json.JSONObject();
+                options.put("razorpay_order_id", razorpayOrderId);
+                options.put("razorpay_payment_id", paymentId);
+                options.put("razorpay_signature", signature);
+                isValid = com.razorpay.Utils.verifyPaymentSignature(options, razorpayKeySecret);
+            } catch (Exception e) {
+                log.error("❌ Razorpay signature verification failed with error: {}", e.getMessage());
+                isValid = false;
+            }
+        } else {
+            log.info("ℹ️ Razorpay keys not configured. Running in mock verification mode.");
+            // Allow mock verification for local testing
+            isValid = paymentId != null && !paymentId.isBlank();
+        }
+
+        if (!isValid) {
+            log.error("❌ Payment verification failed for Order #{}", order.getOrderNumber());
+            throw new BadRequestException("Payment verification failed. Invalid signature.");
+        }
+
+        log.info("💰 Payment verified successfully for Order #{}", order.getOrderNumber());
+
+        // Update order status to CONFIRMED and paymentStatus to PAID
+        order.setPaymentStatus("PAID");
+        order.setStatus(OrderStatus.CONFIRMED);
+        order.setPaymentId(paymentId); // Update with the actual Razorpay Payment ID
+        order = orderRepository.save(order);
+
+        // Record status history
+        statusHistoryRepository.save(OrderStatusHistory.builder()
+                .order(order)
+                .status(OrderStatus.CONFIRMED)
+                .message("Payment verified and order confirmed")
+                .build());
+
+        // Send order confirmation email upon successful payment verification
+        emailService.sendOrderConfirmationEmail(order);
+
+        return mapper.toOrderResponse(order);
     }
 }

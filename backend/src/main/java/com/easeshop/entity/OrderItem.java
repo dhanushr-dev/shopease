@@ -10,7 +10,9 @@ import java.math.BigDecimal;
  * Captures the price at the time of purchase (snapshot).
  */
 @Entity
-@Table(name = "order_items")
+@Table(name = "order_items", indexes = {
+    @Index(name = "idx_order_items_order_id", columnList = "order_id")
+})
 @Data
 @Builder
 @NoArgsConstructor

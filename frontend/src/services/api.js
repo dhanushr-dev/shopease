@@ -138,6 +138,7 @@ export const orderAPI = {
   getRefund: (id) => api.get(`/orders/${id}/refund`),
   getInvoice: (id) => api.get(`/orders/${id}/invoice`),
   getTracking: (id) => api.get(`/orders/${id}/tracking`),
+  verifyPayment: (id, data) => api.post(`/orders/${id}/verify`, data),
   // Admin
   getAllAdmin: (params) => api.get('/admin/orders', { params }),
   updateStatus: (id, data) => api.put(`/admin/orders/${id}/status`, data),
@@ -162,8 +163,8 @@ export const userAPI = {
 export const adminAPI = {
   getDashboard: () => api.get('/admin/dashboard'),
   getAdminProducts: (params) => api.get('/admin/products', { params }),
-  getUsers: () => api.get('/admin/users'),
-  getAllOrders: () => api.get('/admin/orders'),
+  getUsers: (params) => api.get('/admin/users', { params }),
+  getAllOrders: (params) => api.get('/admin/orders', { params }),
   updateOrderStatus: (id, data) => api.put(`/admin/orders/${id}/status`, data),
   getProductById: (id) => api.get(`/admin/products/${id}`),
   createProduct: (data) => api.post('/admin/products', data),
@@ -174,13 +175,13 @@ export const adminAPI = {
   deleteCategory: (id) => api.delete(`/admin/categories/${id}`),
   getAllCategories: () => api.get('/admin/categories'),
   // Return/Replace
-  getReturns: () => api.get('/admin/returns'),
+  getReturns: (params) => api.get('/admin/returns', { params }),
   approveReturn: (id) => api.put(`/admin/returns/${id}/approve`),
   rejectReturn: (id) => api.put(`/admin/returns/${id}/reject`),
-  getReplacements: () => api.get('/admin/replacements'),
+  getReplacements: (params) => api.get('/admin/replacements', { params }),
   approveReplacement: (id) => api.put(`/admin/replacements/${id}/approve`),
   rejectReplacement: (id) => api.put(`/admin/replacements/${id}/reject`),
-  getRefunds: () => api.get('/admin/refunds'),
+  getRefunds: (params) => api.get('/admin/refunds', { params }),
   completeRefund: (id) => api.put(`/admin/refunds/${id}/complete`),
   // Analytics
   getLowStock: () => api.get('/admin/dashboard/low-stock'),

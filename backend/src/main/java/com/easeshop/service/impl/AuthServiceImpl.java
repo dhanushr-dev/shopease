@@ -51,10 +51,10 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Email is already registered: " + request.getEmail());
         }
 
-        Role assignedRole = Role.ROLE_USER;
         if ("ADMIN".equalsIgnoreCase(request.getAccountType()) || "SELLER".equalsIgnoreCase(request.getAccountType())) {
-            assignedRole = Role.ROLE_ADMIN;
+            throw new BadRequestException("Admin registration is not allowed from public signup.");
         }
+        Role assignedRole = Role.ROLE_USER;
 
         User user = User.builder()
                 .name(request.getName())
