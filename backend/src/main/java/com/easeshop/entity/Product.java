@@ -29,7 +29,8 @@ public class Product {
     private Long id;
 
     @Version
-    private Long version;
+    @Builder.Default
+    private Long version = 0L;
 
     @Column(nullable = false, length = 200)
     private String name;

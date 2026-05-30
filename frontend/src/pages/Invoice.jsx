@@ -54,7 +54,7 @@ export default function Invoice() {
     </div>
   );
 
-  const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const subtotal = (order.items || []).reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const discount = order.discountAmount || 0;
 
   return (
@@ -135,7 +135,7 @@ export default function Invoice() {
                   <p className="text-surface-600 text-sm">
                     {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}
                   </p>
-                  <p className="text-surface-600 text-sm mt-1">Phone: {order.shippingAddress.phone}</p>
+                  <p className="text-surface-600 text-sm mt-1">Phone: {order.shippingAddress.phoneNumber}</p>
                 </>
               ) : (
                 <p className="text-surface-600 text-sm">Address not available</p>
@@ -157,7 +157,7 @@ export default function Invoice() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-100">
-                {order.items.map((item, idx) => {
+                {(order.items || []).map((item, idx) => {
                   // Assuming item discount isn't tracked per item, just put 0 unless it exists
                   const itemDiscount = 0; 
                   return (
