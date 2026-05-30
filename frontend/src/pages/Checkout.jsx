@@ -27,6 +27,17 @@ export default function Checkout() {
   useEffect(() => { 
     fetchAddresses(); 
     fetchCoupons();
+
+    // Dynamically load Razorpay checkout SDK
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
   }, []);
 
   const fetchCoupons = async () => {
@@ -56,21 +67,7 @@ export default function Checkout() {
       toast.error('Please select a shipping address');
       return;
     }
-    if (paymentMethod === 'ONLINE') {
-      navigate('/payment', {
-        state: {
-          addressId: selectedAddress,
-          notes: notes || null,
-          couponCode: appliedCoupon?.code || null,
-          amount: finalAmount,
-          discountAmount,
-          subtotal: cart.totalAmount,
-          itemsCount: cart.items.length
-        }
-      });
-    } else {
-      executePlaceOrder('COD');
-    }
+    executePlaceOrder(paymentMethod);
   };
 
   const executePlaceOrder = async (method) => {
@@ -82,15 +79,71 @@ export default function Checkout() {
         paymentMethod: method,
         couponCode: appliedCoupon?.code || null
       });
+
       if (res.data.success) {
-        toast.success(`Order placed! #${res.data.data.orderNumber}`);
-        await fetchCart();
-        navigate('/orders');
+        const orderData = res.data.data;
+
+        if (method === 'ONLINE') {
+          // If Razorpay script is loaded, trigger modal directly
+          if (window.Razorpay) {
+            const options = {
+              key: orderData.razorpayKeyId || 'rzp_test_SkaF96nrBA36yp',
+              amount: finalAmount * 100, // in paise
+              currency: 'INR',
+              name: 'ShopEase',
+              description: 'E-commerce Purchase',
+              order_id: orderData.razorpayOrderId,
+              handler: async function (response) {
+                try {
+                  setPlacing(true);
+                  const verifyRes = await orderAPI.verifyPayment(orderData.id, {
+                    paymentId: response.razorpay_payment_id,
+                    razorpayOrderId: response.razorpay_order_id || orderData.razorpayOrderId,
+                    signature: response.razorpay_signature
+                  });
+
+                  if (verifyRes.data.success) {
+                    toast.success('Payment verified successfully!');
+                    await fetchCart();
+                    navigate('/payment-success', { state: { order: verifyRes.data.data } });
+                  } else {
+                    throw new Error('Payment verification failed');
+                  }
+                } catch (err) {
+                  toast.error(err.response?.data?.message || 'Verification failed');
+                  setPlacing(false);
+                }
+              },
+              prefill: {
+                name: JSON.parse(localStorage.getItem('shopease_user'))?.name || '',
+                email: JSON.parse(localStorage.getItem('shopease_user'))?.email || '',
+              },
+              theme: {
+                color: '#6366f1' // Indigo
+              },
+              modal: {
+                ondismiss: function() {
+                  setPlacing(false);
+                  toast.error('Payment cancelled');
+                }
+              }
+            };
+            const rzp = new window.Razorpay(options);
+            rzp.open();
+          } else {
+            toast.error('Payment gateway could not be loaded. Please try again.');
+            setPlacing(false);
+          }
+        } else {
+          // Cash on Delivery (COD) order
+          toast.success(`Order placed! #${orderData.orderNumber}`);
+          await fetchCart();
+          navigate('/payment-success', { state: { order: orderData } });
+        }
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to place order');
-    } finally { 
-      setPlacing(false); 
+      setPlacing(false);
     }
   };
 
