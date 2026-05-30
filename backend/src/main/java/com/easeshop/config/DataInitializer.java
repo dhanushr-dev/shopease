@@ -27,10 +27,18 @@ public class DataInitializer implements CommandLineRunner {
     private final ProductRepository productRepository;
     private final CartRepository cartRepository;
     private final PasswordEncoder passwordEncoder;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @Override
     @Transactional
     public void run(String... args) {
+        // Safe migration: set version to 0 for any existing products with null version
+        try {
+            jdbcTemplate.execute("UPDATE products SET version = 0 WHERE version IS NULL");
+        } catch (Exception e) {
+            log.warn("⚠️ Failed to execute version migration: {}", e.getMessage());
+        }
+
         if (userRepository.count() > 0) {
             log.info("📦 Database already seeded. Skipping initialization.");
             return;

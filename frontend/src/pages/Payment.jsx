@@ -216,8 +216,31 @@ export default function Payment() {
               }
             }
           };
-          const rzp = new window.Razorpay(options);
-          rzp.open();
+          try {
+            const rzp = new window.Razorpay(options);
+            rzp.open();
+          } catch (rzpError) {
+            console.warn('⚠️ Razorpay failed to open. Falling back to mock simulation...', rzpError);
+            toast.warn('Using simulated secure payment channel');
+            
+            setProcessingStep('Simulating payment authorization...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            setProcessingStep('Verifying simulated payment...');
+            const verifyRes = await orderAPI.verifyPayment(orderData.id, {
+              paymentId: 'pay_mock_' + Math.random().toString(36).substr(2, 9),
+              razorpayOrderId: orderData.razorpayOrderId || 'order_mock_fallback',
+              signature: 'mock_signature'
+            });
+
+            if (verifyRes.data.success) {
+              toast.success('Simulated payment verified successfully!');
+              await fetchCart();
+              navigate('/payment-success', { state: { order: verifyRes.data.data } });
+            } else {
+              throw new Error('Simulated verification failed');
+            }
+          }
         } else {
           // Razorpay offline script fallback
           setProcessingStep('Razorpay offline. Simulating payment authorization...');
