@@ -30,15 +30,13 @@ export default function Checkout() {
     fetchCoupons();
 
     // Dynamically load Razorpay checkout SDK
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    document.body.appendChild(script);
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
+    if (!document.getElementById('razorpay-script')) {
+      const script = document.createElement('script');
+      script.id = 'razorpay-script';
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      document.body.appendChild(script);
+    }
   }, []);
 
   const fetchCoupons = async () => {
@@ -68,19 +66,117 @@ export default function Checkout() {
       toast.error('Please select a shipping address');
       return;
     }
+    if (!cart.items || cart.items.length === 0) {
+      toast.error('Your cart is empty');
+      return;
+    }
     executePlaceOrder(paymentMethod);
   };
 
+  // ─── Razorpay payment handler ──────────────────────────────────────────────
+  const openRazorpay = (orderData) => {
+    // Ensure Razorpay script is loaded
+    if (!window.Razorpay) {
+      toast.error('Payment gateway not loaded. Please refresh and try again.');
+      setPlacing(false);
+      setPlacingStep('');
+      return;
+    }
+
+    const rzpKey = orderData.razorpayKeyId
+      || import.meta.env.VITE_RAZORPAY_KEY_ID
+      || 'rzp_test_SkaF96nrBA36yp';
+
+    const options = {
+      key: rzpKey,
+      amount: Math.round(finalAmount * 100), // in paise
+      currency: 'INR',
+      name: 'ShopEase',
+      description: 'Order #' + orderData.orderNumber,
+      order_id: orderData.razorpayOrderId, // Razorpay order ID from backend
+      handler: async function (response) {
+        // response contains: razorpay_payment_id, razorpay_order_id, razorpay_signature
+        console.log('✅ Razorpay payment success callback:', {
+          payment_id: response.razorpay_payment_id,
+          order_id: response.razorpay_order_id,
+          has_signature: !!response.razorpay_signature,
+        });
+
+        try {
+          setPlacing(true);
+          setPlacingStep('Verifying payment...');
+
+          // Send to backend with exact field names the backend expects
+          const verifyRes = await orderAPI.verifyPayment(orderData.id, {
+            paymentId: response.razorpay_payment_id,
+            razorpayOrderId: response.razorpay_order_id || orderData.razorpayOrderId,
+            signature: response.razorpay_signature,
+          });
+
+          if (verifyRes.data.success) {
+            // Payment confirmed — clear cart & go to success page
+            await fetchCart();
+            toast.success('Payment successful! Your order has been placed.');
+            navigate('/payment-success', {
+              state: { order: verifyRes.data.data },
+              replace: true,
+            });
+          } else {
+            const msg = verifyRes.data.message || 'Payment verification failed';
+            toast.error(msg);
+            setPlacing(false);
+            setPlacingStep('');
+          }
+        } catch (err) {
+          console.error('❌ Verify payment error:', err);
+          const msg =
+            err.response?.data?.message ||
+            err.response?.data?.error ||
+            err.message ||
+            'Payment verification failed. Please contact support.';
+          toast.error(msg);
+          setPlacing(false);
+          setPlacingStep('');
+        }
+      },
+      prefill: {
+        name: (() => { try { return JSON.parse(localStorage.getItem('shopease_user'))?.name || ''; } catch { return ''; } })(),
+        email: (() => { try { return JSON.parse(localStorage.getItem('shopease_user'))?.email || ''; } catch { return ''; } })(),
+      },
+      theme: { color: '#6366f1' },
+      modal: {
+        ondismiss: function () {
+          setPlacing(false);
+          setPlacingStep('');
+          toast('Payment cancelled', { icon: '⚠️' });
+        },
+      },
+    };
+
+    const rzp = new window.Razorpay(options);
+
+    rzp.on('payment.failed', function (response) {
+      console.error('❌ Razorpay payment.failed:', response.error);
+      toast.error(response.error?.description || 'Payment failed. Please try again.');
+      setPlacing(false);
+      setPlacingStep('');
+    });
+
+    rzp.open();
+    // Keep placing=true, placingStep='Opening Razorpay...' until handler or dismiss fires
+  };
+
+  // ─── Main place-order flow ─────────────────────────────────────────────────
   const executePlaceOrder = async (method) => {
     try {
       setPlacing(true);
       setPlacingStep('Placing order...');
 
-      const res = await orderAPI.create({ 
-        addressId: selectedAddress, 
-        notes: notes || null, 
+      const res = await orderAPI.create({
+        addressId: selectedAddress,
+        notes: notes || null,
         paymentMethod: method,
-        couponCode: appliedCoupon?.code || null
+        couponCode: appliedCoupon?.code || null,
       });
 
       if (res.data.success) {
@@ -88,76 +184,27 @@ export default function Checkout() {
 
         if (method === 'ONLINE') {
           setPlacingStep('Opening Razorpay...');
-          // Ensure Razorpay script is loaded
-          if (!window.Razorpay) {
-            toast.error('Payment gateway could not be loaded. Please refresh and try again.');
-            setPlacing(false);
-            setPlacingStep('');
-            return;
-          }
-          const rzpKey = orderData.razorpayKeyId 
-            || import.meta.env.VITE_RAZORPAY_KEY_ID 
-            || 'rzp_test_SkaF96nrBA36yp';
-          const options = {
-            key: rzpKey,
-            amount: Math.round(finalAmount * 100), // in paise
-            currency: 'INR',
-            name: 'ShopEase',
-            description: 'E-commerce Purchase',
-            order_id: orderData.razorpayOrderId,
-            handler: async function (response) {
-              try {
-                setPlacing(true);
-                setPlacingStep('Verifying payment...');
-                const verifyRes = await orderAPI.verifyPayment(orderData.id, {
-                  paymentId: response.razorpay_payment_id,
-                  razorpayOrderId: response.razorpay_order_id || orderData.razorpayOrderId,
-                  signature: response.razorpay_signature
-                });
-
-                if (verifyRes.data.success) {
-                  toast.success('Payment verified! Order confirmed.');
-                  await fetchCart();
-                  navigate('/payment-success', { state: { order: verifyRes.data.data } });
-                } else {
-                  throw new Error('Payment verification failed');
-                }
-              } catch (err) {
-                const msg = err.response?.data?.message || 'Payment verification failed. Please contact support.';
-                toast.error(msg);
-                setPlacing(false);
-                setPlacingStep('');
-              }
-            },
-            prefill: {
-              name: JSON.parse(localStorage.getItem('shopease_user'))?.name || '',
-              email: JSON.parse(localStorage.getItem('shopease_user'))?.email || '',
-            },
-            theme: {
-              color: '#6366f1'
-            },
-            modal: {
-              ondismiss: function() {
-                setPlacing(false);
-                setPlacingStep('');
-                toast.error('Payment cancelled');
-              }
-            }
-          };
-          const rzp = new window.Razorpay(options);
-          rzp.open();
-          // Don't reset placing here — it stays true until handler runs or modal is dismissed
+          // Small delay to let Razorpay SDK finish loading if needed
+          setTimeout(() => openRazorpay(orderData), 300);
         } else {
-          // Cash on Delivery
-          toast.success(`Order placed! #${orderData.orderNumber}`);
+          // Cash on Delivery — immediate success
           await fetchCart();
-          navigate('/payment-success', { state: { order: orderData } });
+          toast.success(`Order placed! #${orderData.orderNumber}`);
+          navigate('/payment-success', {
+            state: { order: orderData },
+            replace: true,
+          });
         }
       } else {
         throw new Error(res.data.message || 'Order creation failed');
       }
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to place order. Please try again.';
+      console.error('❌ Place order error:', err);
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        'Failed to place order. Please try again.';
       toast.error(msg);
       setPlacing(false);
       setPlacingStep('');
@@ -256,11 +303,11 @@ export default function Checkout() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === 'ONLINE' ? 'border-primary-500 bg-primary-50' : 'border-surface-200 hover:border-surface-300'}`}>
                 <input type="radio" name="paymentMethod" checked={paymentMethod === 'ONLINE'} onChange={() => setPaymentMethod('ONLINE')} className="w-4 h-4 text-primary-600" />
-                <span className="font-medium text-surface-900">Online Payment</span>
+                <span className="font-medium text-surface-900">💳 Online Payment</span>
               </label>
               <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${paymentMethod === 'COD' ? 'border-primary-500 bg-primary-50' : 'border-surface-200 hover:border-surface-300'}`}>
                 <input type="radio" name="paymentMethod" checked={paymentMethod === 'COD'} onChange={() => setPaymentMethod('COD')} className="w-4 h-4 text-primary-600" />
-                <span className="font-medium text-surface-900">Cash on Delivery</span>
+                <span className="font-medium text-surface-900">💵 Cash on Delivery</span>
               </label>
             </div>
           </div>

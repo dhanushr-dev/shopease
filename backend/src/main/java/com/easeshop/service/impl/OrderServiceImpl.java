@@ -155,7 +155,10 @@ public class OrderServiceImpl implements OrderService {
             emailService.sendOrderConfirmationEmail(order);
         }
 
-        OrderResponse response = mapper.toOrderResponse(order);
+        // Reload fresh with JOIN FETCH so all lazy collections are hydrated before mapping
+        Order savedOrder = orderRepository.findByIdWithItems(order.getId())
+                .orElse(order); // fallback to in-memory order if not found
+        OrderResponse response = mapper.toOrderResponse(savedOrder);
         if ("ONLINE".equals(paymentMethod)) {
             response.setRazorpayOrderId(razorpayOrderId);
             response.setRazorpayKeyId(razorpayKeyId);
@@ -167,13 +170,19 @@ public class OrderServiceImpl implements OrderService {
     public List<OrderResponse> getUserOrders(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        // Use individual findByIdWithItems per order to avoid cross-join issues on list queries
         return orderRepository.findByUserIdOrderByCreatedAtDesc(user.getId())
-                .stream().map(mapper::toOrderResponse).collect(Collectors.toList());
+                .stream()
+                .map(o -> {
+                    Order full = orderRepository.findByIdWithItems(o.getId()).orElse(o);
+                    return mapper.toOrderResponse(full);
+                })
+                .collect(Collectors.toList());
     }
 
     @Override
     public OrderResponse getOrderById(String email, Long orderId) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByIdWithItems(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
         // Verify ownership (unless admin - handled at controller level)
         User user = userRepository.findByEmail(email)

@@ -85,12 +85,43 @@ public class OrderController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long orderId,
             @RequestBody java.util.Map<String, String> request) {
-        String paymentId = request.get("paymentId");
-        String razorpayOrderId = request.get("razorpayOrderId");
-        String signature = request.get("signature");
+
+        // Accept both naming conventions for compatibility
+        // Frontend may send: paymentId / razorpayPaymentId
+        // Frontend may send: signature / razorpaySignature
+        String paymentId = coalesce(request.get("paymentId"), request.get("razorpayPaymentId"));
+        String razorpayOrderId = coalesce(request.get("razorpayOrderId"), request.get("razorpayOrderId"));
+        String signature = coalesce(request.get("signature"), request.get("razorpaySignature"));
+
+        // Log received fields for debugging (no secrets logged)
+        org.slf4j.LoggerFactory.getLogger(getClass()).info(
+            "🔍 Verify request for order {}: paymentId={}, razorpayOrderId={}, hasSignature={}",
+            orderId, paymentId, razorpayOrderId, signature != null && !signature.isBlank());
+
+        // Validate required fields
+        if (paymentId == null || paymentId.isBlank()) {
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error("Missing required field: paymentId (razorpay_payment_id)"));
+        }
+        if (razorpayOrderId == null || razorpayOrderId.isBlank()) {
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error("Missing required field: razorpayOrderId (razorpay_order_id)"));
+        }
+        if (signature == null || signature.isBlank()) {
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error("Missing required field: signature (razorpay_signature)"));
+        }
 
         OrderResponse order = orderService.verifyRazorpayPayment(
                 userDetails.getUsername(), orderId, paymentId, razorpayOrderId, signature);
-        return ResponseEntity.ok(ApiResponse.success(order, "Payment verified successfully"));
+        return ResponseEntity.ok(ApiResponse.success(order, "Payment verified successfully. Your order has been placed."));
+    }
+
+    /** Returns first non-null, non-blank string or null if all are blank. */
+    private String coalesce(String... values) {
+        for (String v : values) {
+            if (v != null && !v.isBlank()) return v;
+        }
+        return null;
     }
 }
