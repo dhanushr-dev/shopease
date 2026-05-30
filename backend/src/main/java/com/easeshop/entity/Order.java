@@ -23,6 +23,8 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(exclude = "items")
+@ToString(exclude = "items")
 public class Order {
 
     @Id
