@@ -1,4 +1,4 @@
-# ShopEase ER Diagram
+# ShopEase — Database Schema (PostgreSQL)
 
 ## Entity Relationship Diagram (Mermaid)
 
