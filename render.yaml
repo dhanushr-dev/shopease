@@ -1,16 +1,11 @@
 # ========================
-# ShopEase — Render Blueprint (Single Service Deploy)
+# ShopEase — Render Blueprint (Neon PostgreSQL)
 # ========================
-# ONE URL, ONE service, FREE forever
+# ONE URL, ONE service
 #
-# Deploy: https://dashboard.render.com → New → Blueprint → Connect Repo
-# Or just deploy manually using the steps in the walkthrough
-
-databases:
-  - name: shopease-db
-    plan: free
-    databaseName: shopease
-    user: shopease
+# Database: Neon Free Tier (external, not managed by Render)
+# Deploy:   Render Dashboard → New → Blueprint → Connect Repo
+#           Then set DB_* env vars from your Neon dashboard
 
 services:
   - type: web
@@ -20,26 +15,18 @@ services:
     plan: free
     healthCheckPath: /api-docs
     envVars:
+      # ── Neon PostgreSQL (set these from your Neon dashboard) ──
       - key: DB_HOST
-        fromDatabase:
-          name: shopease-db
-          property: host
+        sync: false  # Set manually in Render dashboard
       - key: DB_PORT
-        fromDatabase:
-          name: shopease-db
-          property: port
+        value: "5432"
       - key: DB_NAME
-        fromDatabase:
-          name: shopease-db
-          property: database
+        sync: false  # Set manually in Render dashboard
       - key: DB_USERNAME
-        fromDatabase:
-          name: shopease-db
-          property: user
+        sync: false  # Set manually in Render dashboard
       - key: DB_PASSWORD
-        fromDatabase:
-          name: shopease-db
-          property: password
+        sync: false  # Set manually in Render dashboard
+      # ── App Config ──
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRATION
