@@ -122,7 +122,6 @@ public class OrderServiceTest {
         });
         when(statusHistoryRepository.save(any(OrderStatusHistory.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(productRepository.save(any(Product.class))).thenReturn(product);
-        when(cartRepository.save(any(Cart.class))).thenReturn(cart);
 
         OrderResponse mockResponse = OrderResponse.builder()
                 .orderNumber("SE-123456")
