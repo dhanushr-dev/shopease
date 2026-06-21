@@ -60,3 +60,14 @@ mvnw
 mvnw.cmd
 backend/mvnw
 backend/mvnw.cmd
+
+# Scratch/Debug files
+scratch/
+
+# Screenshots (generated locally)
+screenshots/
+
+# Internal documents
+INTERVIEW_QA.md
+PROJECT_REPORT.md
+
