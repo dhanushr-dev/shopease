@@ -239,6 +239,12 @@ The multi-stage [Dockerfile](./Dockerfile) builds both frontend and backend into
 
 **Dhanush R**
 
+## 👤 Author
+
+📍 Mandya, Karnataka, India
+
+📧 Email: dhanushrmdy@gmail.com
+
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=flat-square&logo=linkedin)](https://www.linkedin.com/in/dhanushr-dev)
 [![GitHub](https://img.shields.io/badge/GitHub-Follow-181717?style=flat-square&logo=github)](https://github.com/dhanushr-dev)
 
