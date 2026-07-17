@@ -39,21 +39,57 @@ public class DataInitializer implements CommandLineRunner {
             log.warn("⚠️ Failed to execute version migration: {}", e.getMessage());
         }
 
-        if (userRepository.count() > 0) {
-            log.info("📦 Database already seeded. Skipping initialization.");
+        // Idempotent category image updates (using high-quality Unsplash images)
+        try {
+            jdbcTemplate.update("UPDATE categories SET image_url = ? WHERE name = ? AND (image_url IS NULL OR image_url = '')", 
+                "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&auto=format&fit=crop&q=80", "Women's Wear");
+            jdbcTemplate.update("UPDATE categories SET image_url = ? WHERE name = ? AND (image_url IS NULL OR image_url = '')", 
+                "https://images.unsplash.com/photo-1490367532201-b9bc1dc483f6?w=600&auto=format&fit=crop&q=80", "Men's Wear");
+            jdbcTemplate.update("UPDATE categories SET image_url = ? WHERE name = ? AND (image_url IS NULL OR image_url = '')", 
+                "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=600&auto=format&fit=crop&q=80", "Ethnic Wear");
+            jdbcTemplate.update("UPDATE categories SET image_url = ? WHERE name = ? AND (image_url IS NULL OR image_url = '')", 
+                "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&auto=format&fit=crop&q=80", "Footwear");
+            jdbcTemplate.update("UPDATE categories SET image_url = ? WHERE name = ? AND (image_url IS NULL OR image_url = '')", 
+                "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600&auto=format&fit=crop&q=80", "Bags & Handbags");
+            jdbcTemplate.update("UPDATE categories SET image_url = ? WHERE name = ? AND (image_url IS NULL OR image_url = '')", 
+                "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&auto=format&fit=crop&q=80", "Jewellery");
+            jdbcTemplate.update("UPDATE categories SET image_url = ? WHERE name = ? AND (image_url IS NULL OR image_url = '')", 
+                "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?w=600&auto=format&fit=crop&q=80", "Watches");
+            jdbcTemplate.update("UPDATE categories SET image_url = ? WHERE name = ? AND (image_url IS NULL OR image_url = '')", 
+                "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=600&auto=format&fit=crop&q=80", "Beauty & Makeup");
+            jdbcTemplate.update("UPDATE categories SET image_url = ? WHERE name = ? AND (image_url IS NULL OR image_url = '')", 
+                "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&auto=format&fit=crop&q=80", "Sunglasses");
+            jdbcTemplate.update("UPDATE categories SET image_url = ? WHERE name = ? AND (image_url IS NULL OR image_url = '')", 
+                "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&auto=format&fit=crop&q=80", "Winter Wear");
+            jdbcTemplate.update("UPDATE categories SET image_url = ? WHERE name = ? AND (image_url IS NULL OR image_url = '')", 
+                "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600&auto=format&fit=crop&q=80", "Activewear");
+            jdbcTemplate.update("UPDATE categories SET image_url = ? WHERE name = ? AND (image_url IS NULL OR image_url = '')", 
+                "https://images.unsplash.com/photo-1519457431-44ccd64a579b?w=600&auto=format&fit=crop&q=80", "Kids Fashion");
+            log.info("✅ Checked and updated category images in the database");
+        } catch (Exception e) {
+            log.warn("⚠️ Failed to execute category image update migration: {}", e.getMessage());
+        }
+
+        // Idempotent admin account creation
+        User admin = userRepository.findByEmail("admin@shopease.com").orElse(null);
+        if (admin == null) {
+            admin = userRepository.save(User.builder()
+                    .name("Admin User")
+                    .email("admin@shopease.com")
+                    .password(passwordEncoder.encode("admin123"))
+                    .role(Role.ROLE_ADMIN)
+                    .phone("9876543210")
+                    .build());
+            log.info("✅ Created admin user");
+        }
+
+        // If the database has already been seeded with other data, skip generating duplicate categories/products
+        if (userRepository.count() > 1 && categoryRepository.count() > 0) {
+            log.info("📦 Database already seeded with users and categories. Skipping full seeding.");
             return;
         }
 
         log.info("🌱 Seeding database with initial data...");
-
-        // Create Users
-        User admin = userRepository.save(User.builder()
-                .name("Admin User")
-                .email("admin@shopease.com")
-                .password(passwordEncoder.encode("admin123"))
-                .role(Role.ROLE_ADMIN)
-                .phone("9876543210")
-                .build());
 
         User john = userRepository.save(User.builder()
                 .name("John Doe")
@@ -71,7 +107,7 @@ public class DataInitializer implements CommandLineRunner {
                 .phone("9876543212")
                 .build());
 
-        log.info("✅ Created 3 users (1 admin, 2 users)");
+        log.info("✅ Created John and Jane user accounts");
 
         // Create Carts for users
         cartRepository.save(Cart.builder().user(john).build());
@@ -95,18 +131,18 @@ public class DataInitializer implements CommandLineRunner {
         log.info("✅ Created sample addresses");
 
         // Create Categories — Fashion Focused
-        Category womenWear = categoryRepository.save(Category.builder().name("Women's Wear").description("Trendy dresses, tops, and ethnic wear for women").active(true).build());
-        Category menWear = categoryRepository.save(Category.builder().name("Men's Wear").description("Shirts, t-shirts, jeans and formal wear for men").active(true).build());
-        Category ethnicWear = categoryRepository.save(Category.builder().name("Ethnic Wear").description("Traditional Indian kurtas, sarees, and lehengas").active(true).build());
-        Category footwear = categoryRepository.save(Category.builder().name("Footwear").description("Sneakers, heels, boots and sandals").active(true).build());
-        Category bagsCategory = categoryRepository.save(Category.builder().name("Bags & Handbags").description("Totes, clutches, backpacks and sling bags").active(true).build());
-        Category jewelleryCategory = categoryRepository.save(Category.builder().name("Jewellery").description("Necklaces, earrings, bracelets and rings").active(true).build());
-        Category watchesCategory = categoryRepository.save(Category.builder().name("Watches").description("Analog, digital and smartwatches").active(true).build());
-        Category beautyCategory = categoryRepository.save(Category.builder().name("Beauty & Makeup").description("Cosmetics, skincare and fragrances").active(true).build());
-        Category sunglassesCategory = categoryRepository.save(Category.builder().name("Sunglasses").description("Aviators, wayfarers and designer frames").active(true).build());
-        Category winterWear = categoryRepository.save(Category.builder().name("Winter Wear").description("Jackets, sweaters, hoodies and thermals").active(true).build());
-        Category activewear = categoryRepository.save(Category.builder().name("Activewear").description("Gym wear, yoga pants, sports bras and track suits").active(true).build());
-        Category kidsFashion = categoryRepository.save(Category.builder().name("Kids Fashion").description("Clothing and accessories for kids").active(true).build());
+        Category womenWear = categoryRepository.save(Category.builder().name("Women's Wear").description("Trendy dresses, tops, and ethnic wear for women").imageUrl("https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&auto=format&fit=crop&q=80").active(true).build());
+        Category menWear = categoryRepository.save(Category.builder().name("Men's Wear").description("Shirts, t-shirts, jeans and formal wear for men").imageUrl("https://images.unsplash.com/photo-1490367532201-b9bc1dc483f6?w=600&auto=format&fit=crop&q=80").active(true).build());
+        Category ethnicWear = categoryRepository.save(Category.builder().name("Ethnic Wear").description("Traditional Indian kurtas, sarees, and lehengas").imageUrl("https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=600&auto=format&fit=crop&q=80").active(true).build());
+        Category footwear = categoryRepository.save(Category.builder().name("Footwear").description("Sneakers, heels, boots and sandals").imageUrl("https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&auto=format&fit=crop&q=80").active(true).build());
+        Category bagsCategory = categoryRepository.save(Category.builder().name("Bags & Handbags").description("Totes, clutches, backpacks and sling bags").imageUrl("https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600&auto=format&fit=crop&q=80").active(true).build());
+        Category jewelleryCategory = categoryRepository.save(Category.builder().name("Jewellery").description("Necklaces, earrings, bracelets and rings").imageUrl("https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&auto=format&fit=crop&q=80").active(true).build());
+        Category watchesCategory = categoryRepository.save(Category.builder().name("Watches").description("Analog, digital and smartwatches").imageUrl("https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?w=600&auto=format&fit=crop&q=80").active(true).build());
+        Category beautyCategory = categoryRepository.save(Category.builder().name("Beauty & Makeup").description("Cosmetics, skincare and fragrances").imageUrl("https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=600&auto=format&fit=crop&q=80").active(true).build());
+        Category sunglassesCategory = categoryRepository.save(Category.builder().name("Sunglasses").description("Aviators, wayfarers and designer frames").imageUrl("https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&auto=format&fit=crop&q=80").active(true).build());
+        Category winterWear = categoryRepository.save(Category.builder().name("Winter Wear").description("Jackets, sweaters, hoodies and thermals").imageUrl("https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&auto=format&fit=crop&q=80").active(true).build());
+        Category activewear = categoryRepository.save(Category.builder().name("Activewear").description("Gym wear, yoga pants, sports bras and track suits").imageUrl("https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600&auto=format&fit=crop&q=80").active(true).build());
+        Category kidsFashion = categoryRepository.save(Category.builder().name("Kids Fashion").description("Clothing and accessories for kids").imageUrl("https://images.unsplash.com/photo-1519457431-44ccd64a579b?w=600&auto=format&fit=crop&q=80").active(true).build());
 
         log.info("✅ Created 12 fashion categories");
 
