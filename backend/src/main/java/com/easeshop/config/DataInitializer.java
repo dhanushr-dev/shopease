@@ -73,9 +73,9 @@ public class DataInitializer implements CommandLineRunner {
         // Idempotent product image updates (Crop Top and Puffer Jacket)
         try {
             jdbcTemplate.update("UPDATE products SET image_url = ? WHERE name = ?", 
-                "https://images.unsplash.com/photo-1503342217505-b0a15ec515c7?w=600", "Crop Top - Black");
+                "https://images.unsplash.com/photo-1618244972963-dbee1a7edc95?w=600", "Crop Top - Black");
             jdbcTemplate.update("UPDATE products SET image_url = ? WHERE name = ?", 
-                "https://images.unsplash.com/photo-1544923246-77307dd270b5?w=600", "Puffer Jacket - Black");
+                "https://images.unsplash.com/photo-1608063615781-e5ef77d3d4f4?w=600", "Puffer Jacket - Black");
             log.info("✅ Verified and updated product images for Crop Top and Puffer Jacket in the database");
         } catch (Exception e) {
             log.warn("⚠️ Failed to execute product image update migration: {}", e.getMessage());
@@ -162,7 +162,7 @@ public class DataInitializer implements CommandLineRunner {
                 Product.builder().name("Floral Maxi Dress").description("Elegant floral print maxi dress, perfect for summer outings").price(new BigDecimal("1999")).stock(50).brand("Zara").category(womenWear).createdBy(admin).imageUrl("https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=600").build(),
                 Product.builder().name("Silk Blouse - Ivory").description("Premium silk blouse with button-down front").price(new BigDecimal("2499")).stock(35).brand("H&M").category(womenWear).createdBy(admin).imageUrl("https://images.unsplash.com/photo-1551489186-cf8726f514f8?w=600").build(),
                 Product.builder().name("High-Waist Palazzo Pants").description("Comfortable wide-leg palazzo pants in breathable fabric").price(new BigDecimal("1299")).stock(60).brand("Forever 21").category(womenWear).createdBy(admin).imageUrl("https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=600").build(),
-                Product.builder().name("Crop Top - Black").description("Trendy solid black crop top with ribbed texture").price(new BigDecimal("799")).stock(80).brand("H&M").category(womenWear).createdBy(admin).imageUrl("https://images.unsplash.com/photo-1503342217505-b0a15ec515c7?w=600").build(),
+                Product.builder().name("Crop Top - Black").description("Trendy solid black crop top with ribbed texture").price(new BigDecimal("799")).stock(80).brand("H&M").category(womenWear).createdBy(admin).imageUrl("https://images.unsplash.com/photo-1618244972963-dbee1a7edc95?w=600").build(),
                 Product.builder().name("A-Line Midi Skirt").description("Classic A-line skirt in pastel blue with side zip").price(new BigDecimal("1499")).stock(40).brand("Mango").category(womenWear).createdBy(admin).imageUrl("https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=600").build(),
 
                 // Men's Wear
@@ -208,7 +208,7 @@ public class DataInitializer implements CommandLineRunner {
                 Product.builder().name("Wayfarer Sunglasses").description("Retro wayfarer style with gradient lenses").price(new BigDecimal("1999")).stock(50).brand("Fastrack").category(sunglassesCategory).createdBy(admin).imageUrl("https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600").build(),
 
                 // Winter Wear
-                Product.builder().name("Puffer Jacket - Black").description("Warm quilted puffer jacket with hood, water-resistant").price(new BigDecimal("4999")).stock(25).brand("Zara").category(winterWear).createdBy(admin).imageUrl("https://images.unsplash.com/photo-1544923246-77307dd270b5?w=600").build(),
+                Product.builder().name("Puffer Jacket - Black").description("Warm quilted puffer jacket with hood, water-resistant").price(new BigDecimal("4999")).stock(25).brand("Zara").category(winterWear).createdBy(admin).imageUrl("https://images.unsplash.com/photo-1608063615781-e5ef77d3d4f4?w=600").build(),
                 Product.builder().name("Cashmere Sweater").description("Soft cashmere crew neck sweater in heather grey").price(new BigDecimal("3499")).stock(20).brand("Uniqlo").category(winterWear).createdBy(admin).imageUrl("https://images.unsplash.com/photo-1576871337632-b9aef4c17ab9?w=600").build(),
                 Product.builder().name("Denim Jacket - Classic").description("Timeless blue denim jacket with chest pockets").price(new BigDecimal("2999")).stock(35).brand("Levi's").category(winterWear).createdBy(admin).imageUrl("https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=600").build(),
 
