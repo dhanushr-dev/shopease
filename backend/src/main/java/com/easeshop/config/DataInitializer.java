@@ -75,14 +75,38 @@ public class DataInitializer implements CommandLineRunner {
             jdbcTemplate.update("UPDATE products SET image_url = ? WHERE name = ?", 
                 "https://images.unsplash.com/photo-1618244972963-dbee1a7edc95?w=600", "Crop Top - Black");
             jdbcTemplate.update("UPDATE products SET image_url = ? WHERE name = ?", 
-                "https://images.unsplash.com/photo-1608063615781-e5ef77d3d4f4?w=600", "Puffer Jacket - Black");
+                "https://images.pexels.com/photos/7147889/pexels-photo-7147889.jpeg?auto=compress&cs=tinysrgb&w=600", "Puffer Jacket - Black");
             log.info("✅ Verified and updated product images for Crop Top and Puffer Jacket in the database");
         } catch (Exception e) {
             log.warn("⚠️ Failed to execute product image update migration: {}", e.getMessage());
         }
 
-        // Idempotent admin account creation
-        User admin = userRepository.findByEmail("admin@shopease.com").orElse(null);
+        // Idempotent admin account migration & creation
+        User admin = null;
+        try {
+            // Find duplicate admin (created in previous run with ID > 1) and delete it
+            User dupAdmin = userRepository.findByEmail("admin@shopease.com").orElse(null);
+            if (dupAdmin != null && dupAdmin.getId() != 1L) {
+                userRepository.delete(dupAdmin);
+                log.info("🗑️ Deleted duplicate admin user");
+            }
+
+            // Rename original admin (ID 1, who owns all 40 products) from admin@easeshop.com to admin@shopease.com
+            User mainAdmin = userRepository.findByEmail("admin@easeshop.com").orElse(null);
+            if (mainAdmin != null) {
+                mainAdmin.setEmail("admin@shopease.com");
+                mainAdmin.setPassword(passwordEncoder.encode("admin123"));
+                admin = userRepository.save(mainAdmin);
+                log.info("✅ Migrated admin@easeshop.com to admin@shopease.com (ID 1)");
+            } else {
+                // If it was already renamed, fetch it
+                admin = userRepository.findByEmail("admin@shopease.com").orElse(null);
+            }
+        } catch (Exception e) {
+            log.warn("⚠️ Failed to migrate admin user: {}", e.getMessage());
+        }
+
+        // Fallback admin creation for fresh databases
         if (admin == null) {
             admin = userRepository.save(User.builder()
                     .name("Admin User")
@@ -91,7 +115,7 @@ public class DataInitializer implements CommandLineRunner {
                     .role(Role.ROLE_ADMIN)
                     .phone("9876543210")
                     .build());
-            log.info("✅ Created admin user");
+            log.info("✅ Created fresh admin user");
         }
 
         // If the database has already been seeded with other data, skip generating duplicate categories/products
@@ -208,7 +232,7 @@ public class DataInitializer implements CommandLineRunner {
                 Product.builder().name("Wayfarer Sunglasses").description("Retro wayfarer style with gradient lenses").price(new BigDecimal("1999")).stock(50).brand("Fastrack").category(sunglassesCategory).createdBy(admin).imageUrl("https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600").build(),
 
                 // Winter Wear
-                Product.builder().name("Puffer Jacket - Black").description("Warm quilted puffer jacket with hood, water-resistant").price(new BigDecimal("4999")).stock(25).brand("Zara").category(winterWear).createdBy(admin).imageUrl("https://images.unsplash.com/photo-1608063615781-e5ef77d3d4f4?w=600").build(),
+                Product.builder().name("Puffer Jacket - Black").description("Warm quilted puffer jacket with hood, water-resistant").price(new BigDecimal("4999")).stock(25).brand("Zara").category(winterWear).createdBy(admin).imageUrl("https://images.pexels.com/photos/7147889/pexels-photo-7147889.jpeg?auto=compress&cs=tinysrgb&w=600").build(),
                 Product.builder().name("Cashmere Sweater").description("Soft cashmere crew neck sweater in heather grey").price(new BigDecimal("3499")).stock(20).brand("Uniqlo").category(winterWear).createdBy(admin).imageUrl("https://images.unsplash.com/photo-1576871337632-b9aef4c17ab9?w=600").build(),
                 Product.builder().name("Denim Jacket - Classic").description("Timeless blue denim jacket with chest pockets").price(new BigDecimal("2999")).stock(35).brand("Levi's").category(winterWear).createdBy(admin).imageUrl("https://images.unsplash.com/photo-1551537482-f2075a1d41f2?w=600").build(),
 
