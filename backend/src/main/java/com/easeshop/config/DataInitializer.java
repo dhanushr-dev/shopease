@@ -70,6 +70,17 @@ public class DataInitializer implements CommandLineRunner {
             log.warn("⚠️ Failed to execute category image update migration: {}", e.getMessage());
         }
 
+        // Idempotent product image updates (Crop Top and Puffer Jacket)
+        try {
+            jdbcTemplate.update("UPDATE products SET image_url = ? WHERE name = ?", 
+                "https://images.unsplash.com/photo-1503342217505-b0a15ec515c7?w=600", "Crop Top - Black");
+            jdbcTemplate.update("UPDATE products SET image_url = ? WHERE name = ?", 
+                "https://images.unsplash.com/photo-1544923246-77307dd270b5?w=600", "Puffer Jacket - Black");
+            log.info("✅ Verified and updated product images for Crop Top and Puffer Jacket in the database");
+        } catch (Exception e) {
+            log.warn("⚠️ Failed to execute product image update migration: {}", e.getMessage());
+        }
+
         // Idempotent admin account creation
         User admin = userRepository.findByEmail("admin@shopease.com").orElse(null);
         if (admin == null) {
