@@ -1,16 +1,52 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { HiOutlineMail, HiOutlinePhone, HiOutlineLocationMarker, HiOutlineArrowLeft } from 'react-icons/hi';
+import toast from 'react-hot-toast';
 
 export default function ContactUs() {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
-    // For now, no backend endpoint
-    setForm({ name: '', email: '', subject: '', message: '' });
+    setLoading(true);
+
+    try {
+      const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          service_id: 'service_54iija8',
+          template_id: 'template_4exzvjd',
+          user_id: 'guAtHcTgc7Vzg3rW_',
+          template_params: {
+            from_name: form.name,
+            from_email: form.email,
+            subject: form.subject,
+            message: form.message,
+            reply_to: form.email
+          }
+        })
+      });
+
+      if (response.ok) {
+        setSubmitted(true);
+        toast.success('Message sent successfully!');
+        setForm({ name: '', email: '', subject: '', message: '' });
+      } else {
+        const errorText = await response.text();
+        console.error('EmailJS response error:', errorText);
+        toast.error('Failed to send message. Please try again.');
+      }
+    } catch (error) {
+      console.error('EmailJS connection error:', error);
+      toast.error('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -81,7 +117,19 @@ export default function ContactUs() {
               <label className="input-label">Message</label>
               <textarea required rows="5" className="input-field" value={form.message} onChange={e => setForm({...form, message: e.target.value})}></textarea>
             </div>
-            <button type="submit" className="btn-primary w-full">Submit Message</button>
+            <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2">
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Sending Message...
+                </>
+              ) : (
+                'Submit Message'
+              )}
+            </button>
           </form>
         )}
       </div>
